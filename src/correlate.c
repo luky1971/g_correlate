@@ -41,7 +41,12 @@ void get_corr_vecs(const char *top_fname) {
 
     // DEBUG
     for(int i = 0; i < top.atoms.nr; ++i) {
-        printf("%d: %s-%d\n", i, top.atoms.atom[i].elem, top.atoms.atom[i].atomnumber);
+        printf("%d: %c%c%c%c: %d\n", i, 
+            top.atoms.atom[i].elem[0], 
+            top.atoms.atom[i].elem[1], 
+            top.atoms.atom[i].elem[2], 
+            top.atoms.atom[i].elem[3], 
+            top.atoms.atom[i].atomnumber);
     }
 
     // Free topology data
