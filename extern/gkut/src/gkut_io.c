@@ -12,10 +12,14 @@
 #include "gkut_io.h"
 
 #ifdef GRO_V5
+#include "atoms.h"
 #include "index.h"
+#include "topology.h"
 #include "trxio.h"
 #endif
 #include "smalloc.h"
+#include "tpxio.h"
+#include "typedefs.h"
 
 void read_traj_t(const char *traj_fname, real **t, rvec ***x, matrix **box, int *nframes, int *natoms, output_env_t *oenv) {
 	t_trxstatus *status = NULL;
@@ -102,4 +106,40 @@ void ndx_filter_traj(const char *ndx_fname, rvec **pre_x, rvec ***new_x, int nfr
 
 	sfree(indx[0]);
 	sfree(indx);
+}
+
+
+void read_top_gro(const char *gro_fname, t_topology *top) {
+	char title[256];
+	rvec *x = NULL;
+	matrix box;
+	int ePBC;
+
+	init_top(top);
+
+	read_tps_conf(gro_fname, title, top, &ePBC, &x, NULL, box, FALSE);
+
+	sfree(x);
+}
+
+void free_topology(t_topology *top) {
+	// Cannot use done_top(), causes error- pointer being freed was not allocated. See implementation in typedefs.c
+	done_atom(&(top->atoms));
+	done_symtab(&(top->symtab));
+	done_block(&(top->cgs));
+	done_block(&(top->mols));
+	done_blocka(&(top->excls));
+}
+
+void read_top_tpr(const char *tpr_fname, gmx_mtop_t *mtop) {
+	t_inputrec ir;
+	matrix box;
+	int natoms;
+
+	read_tpx(tpr_fname, &ir, box, &natoms, NULL, NULL, NULL, mtop);
+	done_inputrec(&ir);
+}
+
+void free_mtop(gmx_mtop_t *mtop) {
+	done_mtop(mtop, TRUE);
 }
