@@ -19,7 +19,7 @@
 #endif
 
 // Indices of filenames
-enum {efT_TRAJ, efT_NDX, efT_OUTDAT, efT_NUMFILES};
+enum {efT_TRAJ, efT_NDX, efT_TOP, efT_OUTDAT, efT_NUMFILES};
 
 // Flags
 enum { 
@@ -47,11 +47,7 @@ struct corr_dat_t {
 };
 
 void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, unsigned long flags);
-/* Calculates the autocorrelation funtions for the trajectory in fnames[efT_TRAJ].
- */
-
-void get_vecs(rvec *x);
-/* Calculates the unit bond vectors with hydrogen for the given atom type in the given trajectory frame.
+/* Calculates the autocorrelation funtions for the trajectory in fnames[efT_TRAJ] using the topology in fnames[efT_TOP].
  */
 
 #endif // CORRELATE_H

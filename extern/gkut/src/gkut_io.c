@@ -21,7 +21,7 @@
 #include "tpxio.h"
 #include "typedefs.h"
 
-void read_traj_t(const char *traj_fname, real **t, rvec ***x, matrix **box, int *nframes, int *natoms, output_env_t *oenv) {
+void gk_read_traj_t(const char *traj_fname, real **t, rvec ***x, matrix **box, int *nframes, int *natoms, output_env_t *oenv) {
 	t_trxstatus *status = NULL;
 	int est_frames = FRAMESTEP;
 	*nframes = 0;
@@ -51,13 +51,20 @@ void read_traj_t(const char *traj_fname, real **t, rvec ***x, matrix **box, int 
 	close_trx(status);
 }
 
-void read_traj(const char *traj_fname, rvec ***x, matrix **box, int *nframes, int *natoms, output_env_t *oenv) {
+void gk_read_traj(const char *traj_fname, rvec ***x, matrix **box, int *nframes, int *natoms, output_env_t *oenv) {
 	real *t;
-	read_traj_t(traj_fname, &t, x, box, nframes, natoms, oenv);
+	gk_read_traj_t(traj_fname, &t, x, box, nframes, natoms, oenv);
 	sfree(t);
 }
 
-void print_traj(rvec **x, int nframes, int natoms, const char *fname) {
+void gk_free_traj(rvec **x, int nframes, int natoms) {
+	for(int i = 0; i < nframes; ++i) {
+        sfree(x[i]);
+    }
+    sfree(x);
+}
+
+void gk_print_traj(rvec **x, int nframes, int natoms, const char *fname) {
 	int fr, i;
 	FILE *f = fopen(fname, "w");
 
@@ -71,7 +78,7 @@ void print_traj(rvec **x, int nframes, int natoms, const char *fname) {
 	fclose(f);
 }
 
-void ndx_get_indx(const char *ndx_fname, int numgroups, atom_id ***indx, int **isize) {
+void gk_ndx_get_indx(const char *ndx_fname, int numgroups, atom_id ***indx, int **isize) {
 	char **grp_names;
 
 	snew(*isize, numgroups);
@@ -82,26 +89,26 @@ void ndx_get_indx(const char *ndx_fname, int numgroups, atom_id ***indx, int **i
 	sfree(grp_names);
 }
 
-void filter_vecs(atom_id *indx, int isize, rvec *pre_x, rvec **new_x) {
+void gk_filter_vecs(atom_id *indx, int isize, rvec *pre_x, rvec **new_x) {
 	snew(*new_x, isize);
 	for(int i = 0; i < isize; ++i) {
 		copy_rvec(pre_x[indx[i]], (*new_x)[i]);
 	}
 }
 
-void ndx_filter_traj(const char *ndx_fname, rvec **pre_x, rvec ***new_x, int nframes, int *natoms) {
+void gk_ndx_filter_traj(const char *ndx_fname, rvec **pre_x, rvec ***new_x, int nframes, int *natoms) {
 	const int NUMGROUPS = 1;
 	int *isize;
 	atom_id **indx;
 
-	ndx_get_indx(ndx_fname, NUMGROUPS, &indx, &isize);
+	gk_ndx_get_indx(ndx_fname, NUMGROUPS, &indx, &isize);
 
 	*natoms = isize[0];
 	sfree(isize);
 
 	snew(*new_x, nframes);
 	for(int i = 0; i < nframes; ++i) {
-		filter_vecs(indx[0], *natoms, pre_x[i], &((*new_x)[i]));
+		gk_filter_vecs(indx[0], *natoms, pre_x[i], &((*new_x)[i]));
 	}
 
 	sfree(indx[0]);
@@ -109,7 +116,7 @@ void ndx_filter_traj(const char *ndx_fname, rvec **pre_x, rvec ***new_x, int nfr
 }
 
 
-void read_top_gro(const char *gro_fname, t_topology *top) {
+void gk_read_top_gro(const char *gro_fname, t_topology *top) {
 	char title[256];
 	rvec *x = NULL;
 	matrix box;
@@ -122,7 +129,7 @@ void read_top_gro(const char *gro_fname, t_topology *top) {
 	sfree(x);
 }
 
-void free_topology(t_topology *top) {
+void gk_free_topology(t_topology *top) {
 	// Cannot use done_top(), causes error- pointer being freed was not allocated. See implementation in typedefs.c
 	done_atom(&(top->atoms));
 	done_symtab(&(top->symtab));
@@ -131,7 +138,7 @@ void free_topology(t_topology *top) {
 	done_blocka(&(top->excls));
 }
 
-void read_top_tpr(const char *tpr_fname, gmx_mtop_t *mtop) {
+void gk_read_top_tpr(const char *tpr_fname, gmx_mtop_t *mtop) {
 	t_inputrec ir;
 	matrix box;
 	int natoms;
@@ -140,6 +147,6 @@ void read_top_tpr(const char *tpr_fname, gmx_mtop_t *mtop) {
 	done_inputrec(&ir);
 }
 
-void free_mtop(gmx_mtop_t *mtop) {
+void gk_free_mtop(gmx_mtop_t *mtop) {
 	done_mtop(mtop, TRUE);
 }

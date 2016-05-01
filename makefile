@@ -23,7 +23,8 @@ INCGRO = -I$(GROMACS)/include/ \
 	-I$(GROMACS)/include/gromacs/utility \
 	-I$(GROMACS)/include/gromacs/fileio \
 	-I$(GROMACS)/include/gromacs/commandline \
-	-I$(GROMACS)/include/gromacs/legacyheaders
+	-I$(GROMACS)/include/gromacs/legacyheaders \
+	-I$(GROMACS)/include/gromacs/topology
 LINKGRO = -L$(GROMACS)/lib/x86_64-linux-gnu
 LIBGRO = -lgromacs
 DEFS += -DGRO_V5

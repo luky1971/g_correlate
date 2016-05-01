@@ -36,11 +36,12 @@ int main(int argc, char *argv[]) {
     gmx_bool mem_limit = FALSE;
 #endif
 
-    init_log("gcorr.log", argc, argv);
+    gk_init_log("gcorr.log", argc, argv);
 
     t_filenm fnm[] = {
         {efTRX, "-f", "traj.xtc", ffREAD},
         {efNDX, "-n", "index.ndx", ffOPTRD},
+        {efSTX, "-top", "top.tpr", ffREAD},
         {efDAT, "-o", "corr.dat", ffWRITE}
     };
 
@@ -53,6 +54,7 @@ int main(int argc, char *argv[]) {
 
     fnames[efT_TRAJ] = opt2fn("-f", efT_NUMFILES, fnm);
     fnames[efT_NDX] = opt2fn_null("-n", efT_NUMFILES, fnm);
+    fnames[efT_TOP] = opt2fn("-top", efT_NUMFILES, fnm);
     fnames[efT_OUTDAT] = opt2fn("-o", efT_NUMFILES, fnm);
 
     // Determine flags
@@ -65,10 +67,10 @@ int main(int argc, char *argv[]) {
 
 #ifdef GTA_BENCH
     clock_t clocks = clock() - start;
-    print_log("g_tessellate_area took %d clocks, %f seconds.\n", clocks, (float)clocks/CLOCKS_PER_SEC);
+    gk_print_log("g_tessellate_area took %d clocks, %f seconds.\n", clocks, (float)clocks/CLOCKS_PER_SEC);
 #endif
 
-    close_log();
+    gk_close_log();
 
     return 0;
 }

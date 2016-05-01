@@ -18,7 +18,7 @@
 
 static FILE *out_log = NULL;
 
-void init_log(const char *logfile, int argc, char *argv[]) {
+void gk_init_log(const char *logfile, int argc, char *argv[]) {
 	out_log = fopen(logfile, "a");
 	
 	time_t t = time(NULL);
@@ -33,11 +33,11 @@ void init_log(const char *logfile, int argc, char *argv[]) {
 		ltime->tm_hour, ltime->tm_min, ltime->tm_sec);
 }
 
-void close_log() {
+void gk_close_log() {
 	fclose(out_log);
 }
 
-void print_log(char const *fmt, ...) {
+void gk_print_log(char const *fmt, ...) {
 	va_list arg;
 	va_start(arg, fmt);
 	vprintf(fmt, arg);
@@ -49,7 +49,7 @@ void print_log(char const *fmt, ...) {
 	}
 }
 
-void log_fatal(int fatal_errno, const char *file, int line, char const *fmt, ...) {
+void gk_log_fatal(int fatal_errno, const char *file, int line, char const *fmt, ...) {
 	va_list arg;
 	if(out_log != NULL) {
 		va_start(arg, fmt);
