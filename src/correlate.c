@@ -50,18 +50,20 @@ void get_corr_vecs(const char *top_fname) {
     */
 
     // DEBUG
-    // Print list of bonds
+    // Print counts for interaction types
+    /*
     for(int f = 0; f < F_NRE; ++f) {
         printf("Interactions array for interaction type %d has %d elements.\n", f, top.idef.il[f].nr);
-    }
+    }*/
     
-    /*
-    t_ilist bonds = top.idef.il[F_BONDS];
-    printf("\nInteractions array for BONDS has %d elements.\n", bonds.nr);
+    
+    t_ilist bonds = top.idef.il[F_CONSTR];
+    printf("\nInteractions array for CONSTR has %d elements.\n", bonds.nr);
     for(int i = 0; i < bonds.nr; i+=3) {
         printf("Bond %d, type %d: %d %d\n", i/3, bonds.iatoms[i], bonds.iatoms[i+1], bonds.iatoms[i+2]);
     }
 
+    /*
     bonds = top.idef.il[F_G96BONDS];
     printf("\nInteractions array for G96BONDS has %d elements.\n", bonds.nr);
     for(int i = 0; i < bonds.nr; i+=3) {
