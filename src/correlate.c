@@ -35,6 +35,7 @@ void get_corr_vecs(const char *top_fname) {
             gk_log_fatal(FARGS, "%s is not a supported filetype for topology information!\n", top_fname);
     }*/
     if(fn2ftp(top_fname) == efTOP || fn2ftp(top_fname) == efITP) {
+        printf("%s\n", top_fname);
         top = read_top(top_fname, NULL);
     }
     else {
