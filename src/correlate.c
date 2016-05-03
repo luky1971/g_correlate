@@ -17,8 +17,9 @@
 #include "smalloc.h"
 
 void get_corr_vecs(const char *top_fname) {
-    t_topology top;
+    t_topology *top;
 
+    /*
     switch(fn2ftp(top_fname)) {
         case efGRO:
                 gk_read_top_gro(top_fname, &top);
@@ -32,10 +33,16 @@ void get_corr_vecs(const char *top_fname) {
             break;
         default:
             gk_log_fatal(FARGS, "%s is not a supported filetype for topology information!\n", top_fname);
+    }*/
+    if(fn2ftp(top_fname) == efTOP || fn2ftp(top_fname) == efITP) {
+        top = read_top(top_fname, NULL);
+    }
+    else {
+        gk_log_fatal(FARGS, "%s is not a supported filetype for topology information!\n", top_fname);
     }
 
-    if(top.idef.ntypes <= 0) {
-        gk_free_topology(&top);
+    if(top->idef.ntypes <= 0) {
+        gk_free_topology(top);
         gk_log_fatal(FARGS, "No interaction information found in %s!\n", top_fname);
     }
 
@@ -57,8 +64,8 @@ void get_corr_vecs(const char *top_fname) {
     }*/
     
     
-    t_ilist bonds = top.idef.il[F_CONSTR];
-    printf("\nInteractions array for CONSTR has %d elements.\n", bonds.nr);
+    t_ilist bonds = top->idef.il[F_BONDS];
+    printf("\nInteractions array for F_BONDS has %d elements.\n", bonds.nr);
     for(int i = 0; i < bonds.nr; i+=3) {
         printf("Bond %d, type %d: %d %d\n", i/3, bonds.iatoms[i], bonds.iatoms[i+1], bonds.iatoms[i+2]);
     }
@@ -71,7 +78,7 @@ void get_corr_vecs(const char *top_fname) {
     }*/
     
     // Free topology data
-    gk_free_topology(&top);
+    gk_free_topology(top);
 }
 
 void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, unsigned long flags) {

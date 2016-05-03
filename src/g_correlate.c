@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
     t_filenm fnm[] = {
         {efTRX, "-f", "traj.xtc", ffREAD},
         {efNDX, "-n", "index.ndx", ffOPTRD},
-        {efSTX, "-top", "top.tpr", ffREAD},
+        {efTOP, "-top", "topol.top", ffREAD},
         {efDAT, "-o", "corr.dat", ffWRITE}
     };
 

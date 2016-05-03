@@ -14,9 +14,8 @@
 
 #ifdef GRO_V5
 #include "pargs.h"
-#else
-#include "statutil.h"
 #endif
+#include "statutil.h"
 
 // Indices of filenames
 enum {efT_TRAJ, efT_NDX, efT_TOP, efT_OUTDAT, efT_NUMFILES};
