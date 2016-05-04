@@ -28,21 +28,21 @@ enum {
                      // When C_MEM_LIMIT is not set, the whole trajectory is loaded at once.
 };
 
-struct res_corr_t {
-    const char *res_name; // name of this residue
-    real **auto_corr; // autocorrelation function values per atom, size [sum(natoms)][corr_dat.ncorr]
-    real *s2; // S2 order parameter for each atom, size [sum(natoms)]
-    int *natoms; // number of atoms in this residue for each atom type in corr_dat.atomtypes. Size corr_dat.ntypes.
-    // The atoms in auto_corr[] and s2[] are grouped by atom type in the same order as they are specified in corr_dat.atomtypes.
-    // natoms[] is also in the same order of atom types.
-};
-
+// The atoms in auto_corr[] and s2[] are grouped by atom type in the same order as they are specified in atomtypes.
+// natoms[] is also in the same order of atom types.
 struct corr_dat_t {
-    real *t; // time delays in autocorrelation function (domain) of size ncorr.
-    struct res_corr_t *res_corr; // array of structs holding autocorrelation function values and S2 parameters for each residue. Size nres.
-    // TODO: atomtypes and ntypes
-    int nres; // number of residues
-    int ncorr; // number of autocorrelation values per residue
+    int *atomtypes; // INPUT: the target atom types, identified by atomic number, to be tracked in autocorrelation.
+    int n_atomtypes; // INPUT: the number of elements in atomtypes.
+
+    real *t; // time delays in autocorrelation function (domain), size ncorr.
+    real **auto_corr; // autocorrelation function values per atom, size [sum(natoms)][ncorr]
+    real *s2; // S2 order parameter for each atom, size [sum(natoms)]
+    int ncorr; // number of different time delays for autocorrelation.
+    int *natoms; // number of atoms for each atom type in atomtypes. Size n_atomtypes.
+
+    int *res; // The residue ID of each atom, in same order as auto_corr and s2.
+    const char **res_names; // The names of the residues indexed by the IDs in res.
+    int nres; // number of residues.
 };
 
 void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, unsigned long flags);
