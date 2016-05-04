@@ -34,11 +34,12 @@ struct corr_dat_t {
     int *atomtypes; // INPUT: the target atom types, identified by atomic number, to be tracked in autocorrelation.
     int n_atomtypes; // INPUT: the number of elements in atomtypes.
 
-    real *t; // time delays in autocorrelation function (domain), size ncorr.
-    real **auto_corr; // autocorrelation function values per atom, size [sum(natoms)][ncorr]
-    real *s2; // S2 order parameter for each atom, size [sum(natoms)]
+    real *t; // INPUT: time delays in autocorrelation function (domain), size ncorr.
+    real **auto_corr; // autocorrelation function values for each atom-H pair, size [sum(natoms)][ncorr]
+    real *s2; // S2 order parameter for each atom-H pair, size [sum(natoms)]
     int ncorr; // number of different time delays for autocorrelation.
-    int *natoms; // number of atoms for each atom type in atomtypes. Size n_atomtypes.
+
+    int *natoms; // number of atoms found for each atom type in atomtypes. Size n_atomtypes.
 
     int *res; // The residue ID of each atom, in same order as auto_corr and s2.
     const char **res_names; // The names of the residues indexed by the IDs in res.
@@ -47,6 +48,10 @@ struct corr_dat_t {
 
 void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, unsigned long flags);
 /* Calculates the autocorrelation funtions for the trajectory in fnames[efT_TRAJ] using the topology in fnames[efT_TOP].
+ */
+
+void free_corr(struct corr_dat_t *corr);
+/* Frees the dynamic memory in a corr_dat_t struct.
  */
 
 #endif // CORRELATE_H

@@ -13,8 +13,12 @@
 #include <time.h>
 #endif
 #include "macros.h"
+#include "smalloc.h"
 #include "gkut_log.h"
 #include "correlate.h"
+
+#define C_ATOMNUM 6 // Atomic number of carbon
+#define N_ATOMNUM 7 // Atomic number of nitrogen
 
 int main(int argc, char *argv[]) {
 #ifdef GTA_BENCH
@@ -29,11 +33,13 @@ int main(int argc, char *argv[]) {
     const char *fnames[efT_NUMFILES];
     output_env_t oenv = NULL;
 
+    int a_opt = 2; // Whether to use CH, NH, or both for S2 calculation. See t_pargs pa[] below.
     gmx_bool fft = FALSE;
+    gmx_bool mem_limit;
 #ifdef CMEMLIMIT
-    gmx_bool mem_limit = TRUE;
+    mem_limit = TRUE;
 #else
-    gmx_bool mem_limit = FALSE;
+    mem_limit = FALSE;
 #endif
 
     gk_init_log("gcorr.log", argc, argv);
@@ -41,29 +47,44 @@ int main(int argc, char *argv[]) {
     t_filenm fnm[] = {
         {efTRX, "-f", "traj.xtc", ffREAD},
         {efNDX, "-n", "index.ndx", ffOPTRD},
-        {efSTX, "-top", "top.tpr", ffREAD},
+        {efSTX, "-s", "topol.tpr", ffREAD},
         {efDAT, "-o", "corr.dat", ffWRITE}
     };
 
     t_pargs pa[] = {
-        {"-fft", FALSE, etINT, {&fft}, "use FFT for calculating S2."},
-        {"-limit", FALSE, etBOOL, {&mem_limit}, "limit number of trajectory frames loaded into memory. If false, whole trajectory is loaded at once."}
+        {"-a", FALSE, etINT, {&a_opt}, "Set which atom pairs to use for calculating S2 (0 = CH, 1 = NH, 2 = Both)"},
+        {"-fft", FALSE, etINT, {&fft}, "Use FFT for calculating S2."},
+        {"-limit", FALSE, etBOOL, {&mem_limit}, "Limit number of trajectory frames loaded into memory. If false, whole trajectory is loaded at once."}
     };
 
     parse_common_args(&argc, argv, 0, efT_NUMFILES, fnm, asize(pa), pa, asize(desc), desc, 0, NULL, &oenv);
 
     fnames[efT_TRAJ] = opt2fn("-f", efT_NUMFILES, fnm);
     fnames[efT_NDX] = opt2fn_null("-n", efT_NUMFILES, fnm);
-    fnames[efT_TOP] = opt2fn("-top", efT_NUMFILES, fnm);
+    fnames[efT_TOP] = opt2fn("-s", efT_NUMFILES, fnm);
     fnames[efT_OUTDAT] = opt2fn("-o", efT_NUMFILES, fnm);
 
-    // Determine flags
+    // Set flags
     unsigned long flags = ((int)fft * C_FFT) 
                         | ((int)mem_limit * C_MEM_LIMIT);
 
-    // Run autocorrelation and S2 calculation
+    // Initialize autocorrelation parameters
     struct corr_dat_t corr;
+    corr.n_atomtypes = a_opt < 2 ? 1 : 2;
+    snew(corr.atomtypes, corr.n_atomtypes);
+    corr.atomtypes[0] = C_ATOMNUM;
+    if(a_opt == 1)
+        corr.atomtypes[0] = N_ATOMNUM;
+    else if(a_opt >= 2)
+        corr.atomtypes[1] = N_ATOMNUM;
+
+    // Run autocorrelation and S2 calculation
     calc_ac(fnames, &oenv, &corr, flags);
+
+    // TODO: calculate S2, print results, and whatnot!
+
+    // Cleanup
+    free_corr(&corr);
 
 #ifdef GTA_BENCH
     clock_t clocks = clock() - start;
