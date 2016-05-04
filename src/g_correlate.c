@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
     const char *fnames[efT_NUMFILES];
     output_env_t oenv = NULL;
 
-    int a_opt = 2; // Whether to use CH, NH, or both for S2 calculation. See t_pargs pa[] below.
+    char pairnames[256];
     gmx_bool fft = FALSE;
     gmx_bool mem_limit;
 #ifdef CMEMLIMIT
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     };
 
     t_pargs pa[] = {
-        {"-a", FALSE, etINT, {&a_opt}, "Set which atom pairs to use for calculating S2 (0 = CH, 1 = NH, 2 = Both)"},
+        {"-a", FALSE, etSTR, {pairnames}, "Comma-delimited list of atom name pairs to use for calculating S2, supports wildcards (ex. 'N-H, ND2-H*, C*-H*')"},
         {"-fft", FALSE, etINT, {&fft}, "Use FFT for calculating S2."},
         {"-limit", FALSE, etBOOL, {&mem_limit}, "Limit number of trajectory frames loaded into memory. If false, whole trajectory is loaded at once."}
     };

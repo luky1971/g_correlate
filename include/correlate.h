@@ -29,27 +29,33 @@ enum {
 };
 
 
-// The atoms in auto_corr[] and s2[] are grouped by atom type in the same order as they are specified in atomtypes.
-// natoms[] is also in the same order of atom types.
 struct corr_dat_t {
-    int *atomtypes; // INPUT: the target atom types, identified by atomic number, to be tracked in autocorrelation.
-    int n_atomtypes; // INPUT: the number of elements in atomtypes.
+    const char **atomnames; // INPUT: the target atom name pairs to be tracked in autocorrelation. Size 2 * npairs.
+                            // Should be formatted as a linear array of pairs, with two adjacent atom name strings corresponding to a pair.
+                            // Supports wildcards.
+                            // ex. given {"N", "H", "ND2", "H*", "C*", "H*"}, the program will search for N-H pairs, ND2-H* pairs, and C*-H* pairs,
+                            // where H* will match any atom with a name starting with 'H', and likewise for C*.
+    int npairs; // INPUT: the number of pairs in atomnames.
 
     real *t; // INPUT: time delays in autocorrelation function (domain), size ncorr.
-    real **auto_corr; // autocorrelation function values for each atom-H pair, size [sum(natoms)][ncorr]
-    real *s2; // S2 order parameter for each atom-H pair, size [sum(natoms)]
+
+    // The atom pairs in auto_corr[] and s2[] are grouped by atom name in the same order as they are specified in atomnames.
+    // ie. for each atomnames pair i, there are natompairs[i] autocorrelation values,
+    // followed by natompairs[i+1] autocorrelation values for pair i + 1, and so on until i + x = npairs.
+    real **auto_corr; // autocorrelation function values for each atom pair, size [sum(natompairs)][ncorr]
+    real *s2; // S2 order parameter for each atom pair, size [sum(natompairs)]
     int ncorr; // number of different time delays for autocorrelation.
 
-    int *natoms; // number of atoms found for each atom type in atomtypes. Size n_atomtypes.
+    int *natompairs; // number of atom pairs found for each atom name pair in atomnames. Size npairs.
 
-    int *res; // The residue ID of each atom, in same order as auto_corr and s2.
-    const char **res_names; // The names of the residues indexed by the IDs in res.
+    int *res; // The residue ID of each atom pair, in same order as auto_corr and s2.
+    const char **res_names; // The names of the residues. Indexed by the IDs in res. Size nres.
     int nres; // number of residues.
 };
 
 
 void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, unsigned long flags);
-/* Calculates the autocorrelation funtions for the trajectory in fnames[efT_TRAJ] using the topology in fnames[efT_TOP].
+/* Calculates the autocorrelation functions for the trajectory in fnames[efT_TRAJ] using the topology in fnames[efT_TOP].
  */
 
 void free_corr(struct corr_dat_t *corr);

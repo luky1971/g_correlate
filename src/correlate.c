@@ -19,16 +19,15 @@
 #define GS2_ALLOC 10 // Initial amount by which to dynamically allocate array memory.
 #define GS2_HNUM 1 // Atomic number to identify hydrogen atom for atom-H pairs.
 
-void get_corr_pairs(t_atoms *atoms, t_ilist *bonds, // Topology where atom-H pairs will be searched.
-                    int atomtypes[], int n_atomtypes, // Atom types to be searched for in topology to find atom-H pairs.
-                                                      // Identified by atomic number.
-                    int natoms[], // Number of atoms of each type in atomtypes, in same order as atomtypes.
-                                  // Given array should be size n_atomtypes.
-                    int **pairs // Output array of gromacs atom IDs of atom-H pairs. Memory is allocated for pairs.
-                                // The first ID in a pair corresponds to an input atomtype, the second is an associated hydrogen.
-                                // Therefore, the pairs array will be size 2 * sum(natoms).
-                                // The pairs, grouped by the type of the first atom, 
-                                // are in the same order as the order of atomtypes.
+void get_corr_pairs(t_atoms *atoms, t_ilist *bonds, // Input: Topology where atom-H pairs will be searched.
+                    const char **atomnames, int npairs, // Input: Pairs of atom names to be searched for in topology.
+                    int natompairs[], // Output: Number of atom pairs found for each atom name pair in atomnames.
+                                      // Given buffer should be allocated to size npairs.
+                    int **pairs // Output 1D array of gromacs atom IDs of atom pairs. Memory is allocated for pairs.
+                                // The pairs array will be size 2 * sum(natompairs).
+                                // The pairs are grouped by atom names, in the same order as given atomnames.
+                                // ie. for each atomnames pair i, there are natompairs[i] pairs of IDs in this pairs array,
+                                // or 2 * natompairs[i] elements.
                                 // The IDs in this array can be used to index into a gromacs trajectory associated with this topology.
                     ) {
     // Initialize number of pairs for each atomtype to zero.
