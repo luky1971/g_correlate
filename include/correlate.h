@@ -28,6 +28,7 @@ enum {
                      // When C_MEM_LIMIT is not set, the whole trajectory is loaded at once.
 };
 
+
 // The atoms in auto_corr[] and s2[] are grouped by atom type in the same order as they are specified in atomtypes.
 // natoms[] is also in the same order of atom types.
 struct corr_dat_t {
@@ -45,6 +46,7 @@ struct corr_dat_t {
     const char **res_names; // The names of the residues indexed by the IDs in res.
     int nres; // number of residues.
 };
+
 
 void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, unsigned long flags);
 /* Calculates the autocorrelation funtions for the trajectory in fnames[efT_TRAJ] using the topology in fnames[efT_TOP].
