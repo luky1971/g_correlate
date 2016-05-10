@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     };
 
     t_pargs pa[] = {
-        {"-a", FALSE, etSTR, {pairnames}, "Comma-delimited list of atom name pairs to use for calculating S2, supports wildcards (ex. 'N-H, ND2-H*, C*-H*')"},
+        {"-a", FALSE, etSTR, {pairnames}, "Comma-delimited list of atom name pairs to use for calculating S2, supports wildcards (ex. 'N-H,ND2-H*,C*-H*')"},
         {"-fft", FALSE, etINT, {&fft}, "Use FFT for calculating S2."},
         {"-limit", FALSE, etBOOL, {&mem_limit}, "Limit number of trajectory frames loaded into memory. If false, whole trajectory is loaded at once."}
     };

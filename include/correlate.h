@@ -37,20 +37,20 @@ struct corr_dat_t {
                             // where H* will match any atom with a name starting with 'H', and likewise for C*.
     int npairs; // INPUT: the number of pairs in atomnames.
 
-    real *t; // INPUT: time delays in autocorrelation function (domain), size ncorr.
+    int *found_atoms; // Gromacs IDs of the atoms found in the trajectory corresponding to the atom name pairs in atomnames.
+                      // Size 2 * sum(natompairs). Members of a pair are adjacent.
+                      // Atom pairs are grouped in the same order as the names in atomnames.
+    int *natompairs; // number of atom pairs found for each atom name pair in atomnames, in same order. Size npairs.
 
-    // The atom pairs in auto_corr[] and s2[] are grouped by atom name in the same order as they are specified in atomnames.
-    // ie. for each atomnames pair i, there are natompairs[i] autocorrelation values,
-    // followed by natompairs[i+1] autocorrelation values for pair i + 1, and so on until i + x = npairs.
-    real **auto_corr; // autocorrelation function values for each atom pair, size [sum(natompairs)][ncorr]
-    real *s2; // S2 order parameter for each atom pair, size [sum(natompairs)]
+    real *t; // INPUT: time delays in (domain of) autocorrelation function, size ncorr.
     int ncorr; // number of different time delays for autocorrelation.
 
-    int *natompairs; // number of atom pairs found for each atom name pair in atomnames. Size npairs.
-
-    int *res; // The residue ID of each atom pair, in same order as auto_corr and s2.
-    const char **res_names; // The names of the residues. Indexed by the IDs in res. Size nres.
-    int nres; // number of residues.
+    // Each array in auto_corr[] and value in s2[] corresponds to an atom pair in the same order as found_atoms
+    // and are grouped by atom name in the same order as they are specified in atomnames.
+    // ie. for each atomnames pair i, there are natompairs[i] autocorrelation values in auto_corr[i],
+    // followed by natompairs[i+1] autocorrelation values in auto_corr[i+1] for pair i + 1, and so on until i + x = sum(natompairs).
+    real **auto_corr; // autocorrelation function values for each atom pair, size [sum(natompairs)][ncorr]
+    real *s2; // S2 order parameter for each atom pair, size [sum(natompairs)]
 };
 
 

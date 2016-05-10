@@ -17,54 +17,58 @@
 #include "smalloc.h"
 
 #define GS2_ALLOC 10 // Initial amount by which to dynamically allocate array memory.
-#define GS2_HNUM 1 // Atomic number to identify hydrogen atom for atom-H pairs.
 
-void get_corr_pairs(t_atoms *atoms, t_ilist *bonds, // Input: Topology where atom-H pairs will be searched.
+void get_corr_pairs(t_atoms *atoms, t_ilist *bonds, // Input: Topology where atom-atom pairs will be searched.
                     const char **atomnames, int npairs, // Input: Pairs of atom names to be searched for in topology.
                     int natompairs[], // Output: Number of atom pairs found for each atom name pair in atomnames.
                                       // Given buffer should be allocated to size npairs.
                     int **pairs // Output 1D array of gromacs atom IDs of atom pairs. Memory is allocated for pairs.
                                 // The pairs array will be size 2 * sum(natompairs).
+                                // The members of a pair are adjacent.
                                 // The pairs are grouped by atom names, in the same order as given atomnames.
                                 // ie. for each atomnames pair i, there are natompairs[i] pairs of IDs in this pairs array,
                                 // or 2 * natompairs[i] elements.
                                 // The IDs in this array can be used to index into a gromacs trajectory associated with this topology.
                     ) {
     // Initialize number of pairs for each atomtype to zero.
-    for(int i = 0; i < n_atomtypes; ++i) {
+    for(int i = 0; i < npairs; ++i) {
         natoms[i] = 0;
     }
 
-    // Search for atom-H pairs.
+    // Search for atom-atom pairs.
     int cur_alloc = GS2_ALLOC;
     int pair_ind = 0;
     snew(*pairs, cur_alloc);
     int pair_a, pair_b;
-    // Loop through the given atom types.
-    for(int ai = 0; ai < n_atomtypes; ++ai) {
-        // Loop through all bond pairs in the system.
-        // This loop is run for each atom type to keep the pairs in the same order as atomtypes.
-        // This nested loop isn't as bad as it looks; the number of atomtypes is usually only 1 or 2.
+    // Loop through the given atom name pairs.
+    for(int ai = 0; ai < npairs; ++ai) {
+        // Loop through all bond pairs in the system and search for instances of the current atom name pair.
+        // This loop is run for each atom name pair to keep the found pairs in the same order as atomtypes.
+        // This nested loop isn't as bad as it looks; the number of atom name pairs is usually only 1 or 2.
         for(int bi = 0; bi < bonds->nr; bi+=3) {
             pair_a = -1; // -1 means atom not found
-            if(atoms->atom[bonds->iatoms[bi+1]].atomnumber == atomtypes[ai] 
-                && atoms->atom[bonds->iatoms[bi+2]].atomnumber == GS2_HNUM) {
+
+            // Check if the current bond pair matches the current name pair in atomnames
+            if(*(atoms->atomname[bonds->iatoms[bi+1]]) == atomnames[2*ai] 
+                && *(atoms->atomname[bonds->iatoms[bi+2]]) == atomnames[2*ai+1]) {
                 pair_a = bonds->iatoms[bi+1];
                 pair_b = bonds->iatoms[bi+2];
             }
-            else if(atoms->atom[bonds->iatoms[bi+1]].atomnumber == GS2_HNUM 
-                && atoms->atom[bonds->iatoms[bi+2]].atomnumber == atomtypes[ai]) {
+            else if(*(atoms->atomname[bonds->iatoms[bi+1]]) == atomnames[2*ai+1] 
+                && *(atoms->atomname[bonds->iatoms[bi+2]]) == atomnames[2*ai]) {
                 pair_a = bonds->iatoms[bi+2];
                 pair_b = bonds->iatoms[bi+1];
             }
+
+            // If matched, add the atom IDs of the current bond pair to pairs.
             if(pair_a >= 0) {
-                // Found an atom-H pair.
+                // Found an atom-atom pair.
                 // Increase size of pairs array if necessary.
                 if(pair_ind > cur_alloc - 2) {
                     cur_alloc *= 2;
                     srenew(*pairs, cur_alloc);
                 }
-                // Add the found atom-H pair to the pairs array.
+                // Add the found atom-atom pair to the pairs array.
                 (*pairs)[pair_ind++] = pair_a;
                 (*pairs)[pair_ind++] = pair_b;
                 // Increment number of pairs for current atomtype.
@@ -72,16 +76,6 @@ void get_corr_pairs(t_atoms *atoms, t_ilist *bonds, // Input: Topology where ato
             }
         }
     }
-
-    // DEBUG
-    // Print found atom-H pairs.
-    /*
-    for(int i = 0; i < pair_ind; i+=2) {
-        printf("Pair %d: %d and %d, %s and %s, atomic #s %d and %d\n",
-            i/2, (*pairs)[i], (*pairs)[i+1], 
-            *(atoms->atomname[(*pairs)[i]]), *(atoms->atomname[(*pairs)[i+1]]), 
-            atoms->atom[(*pairs)[i]].atomnumber, atoms->atom[(*pairs)[i+1]].atomnumber);
-    }*/
     
     srenew(*pairs, pair_ind * 2); // Free any excess memory in pairs.
 }
@@ -145,24 +139,23 @@ void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, 
     }
 
 
-    // Get atom-H pairs
-    int *pairs;
-    snew(corr->natoms, corr->n_atomtypes);
+    // Get atom-atom pairs
+    snew(corr->natoms, corr->npairs);
 
-    get_corr_pairs(&top.atoms, &bonds, corr->atomtypes, corr->n_atomtypes, corr->natoms, &pairs);
+    get_corr_pairs(&top.atoms, &bonds, corr->atomtypes, corr->npairs, corr->natoms, &(corr->found_atoms));
 
     int total = 0;
-    for(int i = 0; i < corr->n_atomtypes; ++i) {
+    for(int i = 0; i < corr->npairs; ++i) {
         total += corr->natoms[i];
     }
 
     // DEBUG
-    // Print found atom-H pairs.
+    // Print found atom-atom pairs.
     for(int i = 0; i < total * 2; i+=2) {
         printf("Pair %d: %d and %d, %s and %s, atomic #s %d and %d\n",
-            i/2, pairs[i], pairs[i+1], 
-            *(top.atoms.atomname[pairs[i]]), *(top.atoms.atomname[pairs[i+1]]), 
-            top.atoms.atom[pairs[i]].atomnumber, top.atoms.atom[pairs[i+1]].atomnumber);
+            i/2, corr->found_atoms[i], corr->found_atoms[i+1], 
+            *(top.atoms.atomname[corr->found_atoms[i]]), *(top.atoms.atomname[corr->found_atoms[i+1]]), 
+            top.atoms.atom[corr->found_atoms[i]].atomnumber, top.atoms.atom[corr->found_atoms[i+1]].atomnumber);
     }
 
     // Read trajectory and calculate junk
@@ -192,7 +185,6 @@ void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, 
     }
 
     // Cleanup
-    sfree(pairs);
     gk_free_topology(&top);
 }
 
