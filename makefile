@@ -10,6 +10,7 @@ GROMACS = /usr/local/gromacs
 VGRO = 5
 
 GKUT = extern/gkut
+CKUT = extern/ckut
 
 INCLUDE = include
 SRC = src
@@ -54,11 +55,11 @@ install: $(BUILD)/g_correlate
 
 $(BUILD)/g_correlate.o: $(SRC)/g_correlate.c $(INCLUDE)/correlate.h $(INCLUDE)/correlate.h
 	$(CC) $(CFLAGS) -o $(BUILD)/g_correlate.o -c $(SRC)/g_correlate.c \
-	$(DEFS) -I$(INCLUDE) $(INCGRO) -I$(GKUT)/include
+	$(DEFS) -I$(INCLUDE) $(INCGRO) -I$(GKUT)/include -I$(CKUT)/include
 
 $(BUILD)/correlate.o: $(SRC)/correlate.c $(INCLUDE)/correlate.h
 	$(CC) $(CFLAGS) -o $(BUILD)/correlate.o -c $(SRC)/correlate.c \
-	$(DEFS) -I$(INCLUDE) $(INCGRO) -I$(GKUT)/include
+	$(DEFS) -I$(INCLUDE) $(INCGRO) -I$(GKUT)/include -I$(CKUT)/include
 
 clean:
 	make clean -C $(GKUT) \
