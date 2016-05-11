@@ -162,14 +162,17 @@ void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, 
 
     // DEBUG
     // Print found atom-atom pairs.
-    for(int i = 0; i < total * 2; i+=2) {
-        printf("Pair %d: %d and %d, %s and %s, atomic #s %d and %d\n",
-            i/2, corr->found_atoms[i], corr->found_atoms[i+1], 
-            *(top.atoms.atomname[corr->found_atoms[i]]), *(top.atoms.atomname[corr->found_atoms[i+1]]), 
-            top.atoms.atom[corr->found_atoms[i]].atomnumber, top.atoms.atom[corr->found_atoms[i+1]].atomnumber);
-    }
+    // for(int i = 0; i < total * 2; i+=2) {
+    //     printf("Pair %d: %d and %d, %s and %s, atomic #s %d and %d\n",
+    //         i/2, corr->found_atoms[i], corr->found_atoms[i+1], 
+    //         *(top.atoms.atomname[corr->found_atoms[i]]), *(top.atoms.atomname[corr->found_atoms[i+1]]), 
+    //         top.atoms.atom[corr->found_atoms[i]].atomnumber, top.atoms.atom[corr->found_atoms[i+1]].atomnumber);
+    // }
 
     // Read trajectory and calculate junk
+    
+
+    /*
     if(flags & C_MEM_LIMIT) {
         // Load a frame at a time and do calculations
     }
@@ -193,7 +196,7 @@ void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, 
         sfree(t);
         gk_free_traj(x, nframes, natoms);
         sfree(box);
-    }
+    }*/
 
     // Cleanup
     gk_free_topology(&top);
