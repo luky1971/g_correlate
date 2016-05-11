@@ -12,11 +12,12 @@
 #include "correlate.h"
 #include "gkut_io.h"
 #include "gkut_log.h"
+#include "ckut_string.h" // pattern matching atom names
 
-#include "mtop_util.h"
-#include "smalloc.h"
+#include "mtop_util.h" // dealing with topologies
+#include "smalloc.h" // memory stuff
 
-#define GS2_ALLOC 10 // Initial amount by which to dynamically allocate array memory.
+#define GCORR_ALLOC 10 // Initial amount by which to dynamically allocate array memory.
 
 void get_corr_pairs(t_atoms *atoms, t_ilist *bonds, // Input: Topology where atom-atom pairs will be searched.
                     const char **atomnames, int npairs, // Input: Pairs of atom names to be searched for in topology.
@@ -32,11 +33,11 @@ void get_corr_pairs(t_atoms *atoms, t_ilist *bonds, // Input: Topology where ato
                     ) {
     // Initialize number of pairs for each atomtype to zero.
     for(int i = 0; i < npairs; ++i) {
-        natoms[i] = 0;
+        natompairs[i] = 0;
     }
 
     // Search for atom-atom pairs.
-    int cur_alloc = GS2_ALLOC;
+    int cur_alloc = GCORR_ALLOC;
     int pair_ind = 0;
     snew(*pairs, cur_alloc);
     int pair_a, pair_b;
@@ -49,13 +50,23 @@ void get_corr_pairs(t_atoms *atoms, t_ilist *bonds, // Input: Topology where ato
             pair_a = -1; // -1 means atom not found
 
             // Check if the current bond pair matches the current name pair in atomnames
-            if(*(atoms->atomname[bonds->iatoms[bi+1]]) == atomnames[2*ai] 
-                && *(atoms->atomname[bonds->iatoms[bi+2]]) == atomnames[2*ai+1]) {
+            if(ck_strmatch(atomnames[2*ai], *(atoms->atomname[bonds->iatoms[bi+1]])) == 0 
+                && ck_strmatch(atomnames[2*ai+1], *(atoms->atomname[bonds->iatoms[bi+2]])) == 0) {
+                // DEBUG
+                // printf("%s matches %s and %s matches %s\n", 
+                //     atomnames[2*ai], *(atoms->atomname[bonds->iatoms[bi+1]]),
+                //     atomnames[2*ai+1], *(atoms->atomname[bonds->iatoms[bi+2]]));
+
                 pair_a = bonds->iatoms[bi+1];
                 pair_b = bonds->iatoms[bi+2];
             }
-            else if(*(atoms->atomname[bonds->iatoms[bi+1]]) == atomnames[2*ai+1] 
-                && *(atoms->atomname[bonds->iatoms[bi+2]]) == atomnames[2*ai]) {
+            else if(ck_strmatch(atomnames[2*ai+1], *(atoms->atomname[bonds->iatoms[bi+1]])) == 0 
+                && ck_strmatch(atomnames[2*ai], *(atoms->atomname[bonds->iatoms[bi+2]])) == 0) {
+                // DEBUG
+                // printf("%s matches %s and %s matches %s\n", 
+                //     atomnames[2*ai], *(atoms->atomname[bonds->iatoms[bi+2]]),
+                //     atomnames[2*ai+1], *(atoms->atomname[bonds->iatoms[bi+1]]));
+
                 pair_a = bonds->iatoms[bi+2];
                 pair_b = bonds->iatoms[bi+1];
             }
@@ -72,7 +83,7 @@ void get_corr_pairs(t_atoms *atoms, t_ilist *bonds, // Input: Topology where ato
                 (*pairs)[pair_ind++] = pair_a;
                 (*pairs)[pair_ind++] = pair_b;
                 // Increment number of pairs for current atomtype.
-                ++(natoms[ai]);
+                ++(natompairs[ai]);
             }
         }
     }
@@ -140,13 +151,13 @@ void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, 
 
 
     // Get atom-atom pairs
-    snew(corr->natoms, corr->npairs);
+    snew(corr->natompairs, corr->npairs);
 
-    get_corr_pairs(&top.atoms, &bonds, corr->atomtypes, corr->npairs, corr->natoms, &(corr->found_atoms));
+    get_corr_pairs(&top.atoms, &bonds, corr->atomnames, corr->npairs, corr->natompairs, &(corr->found_atoms));
 
     int total = 0;
     for(int i = 0; i < corr->npairs; ++i) {
-        total += corr->natoms[i];
+        total += corr->natompairs[i];
     }
 
     // DEBUG
@@ -188,6 +199,8 @@ void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, 
     gk_free_topology(&top);
 }
 
+// WARNING: this does not free any memory allocated for corr->atomnames.
+// Whoever allocated that memory is responsible for it! 
 void free_corr(struct corr_dat_t *corr) {
     // TODO
 }

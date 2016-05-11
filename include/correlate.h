@@ -12,6 +12,7 @@
 #ifndef CORRELATE_H
 #define CORRELATE_H
 
+// Command line parsing
 #ifdef GRO_V5
 #include "pargs.h"
 #else

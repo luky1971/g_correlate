@@ -12,6 +12,12 @@
 #ifndef GKUT_LOG_H
 #define GKUT_LOG_H
 
+#ifdef GRO_V5
+#include "fatalerror.h"
+#else
+#include "gmx_fatal.h"
+#endif
+
 void gk_init_log(const char *logfile, int argc, char *argv[]);
 /* Opens the logfile and logs program command and initial time/date. Remember to close_log() at end of program.
  */
