@@ -17,7 +17,21 @@
 #include "mtop_util.h" // dealing with topologies
 #include "smalloc.h" // memory stuff
 
-#define GCORR_ALLOC 10 // Initial amount by which to dynamically allocate array memory.
+#define GC_ALLOC 10 // Initial amount by which to dynamically allocate array memory.
+#define GC_TIME_EPS 0.000001 // Epsilon for comparing floating point time values
+
+#define GC_TIME_EQ(X, Y)   (((X) > ((Y) - GC_TIME_EPS)) && ((X) < ((Y) + GC_TIME_EPS)))
+
+void init_corr_dat(corr_dat_t *corr) {
+    corr->atomnames = NULL;
+    corr->npairs = 0;
+    corr->dt = -1;
+    corr->nt = -1;
+    corr->found_atoms = NULL;
+    corr->natompairs = NULL;
+    corr->auto_corr = NULL;
+    corr->s2 = NULL:
+}
 
 void get_pairs(t_atoms *atoms, t_ilist *bonds,
                const char **atomnames, int npairs,
@@ -29,7 +43,7 @@ void get_pairs(t_atoms *atoms, t_ilist *bonds,
     }
 
     // Search for atom-atom pairs.
-    int cur_alloc = GCORR_ALLOC;
+    int cur_alloc = GC_ALLOC;
     int pair_ind = 0;
     snew(*pairs, cur_alloc);
     int pair_a, pair_b;
@@ -164,31 +178,89 @@ void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, 
 
     // Read trajectory and calculate junk
 
-    /*
+    
     if(flags & C_MEM_LIMIT) {
         // Load a frame at a time and do calculations
     }
     else {
-        // Get whole trajectory then do calculations
-        real *t;
-        rvec **x;
-        matrix *box;
-        int nframes, natoms;
+        // Store needed data from whole trajectory then do calculations
+        rvec *x;
+        t_trxstatus *status = NULL;
+        int natoms = 0;
+        real t = 0.0;
+        matrix box;
 
-        gk_read_traj_t(fnames[efT_TRAJ], &t, &x, &box, &nframes, &natoms, oenv);
+        natoms = read_first_x(*oenv, &status, fnames[efT_TRAJ], &t, &x, box);
 
-        // DEBUG
-        // for(int f = 0; f < nframes; ++f) {
-        //  printf("%f\n", t[f]);
-        // }
+        if(natoms > 0) {
+            real cur_dt = 0.0;
+            real last_t = t;
+            int ndata = 0;
 
-        // TODO: whole trajectory autocorrelation
+            if(corr->dt < 0) {
+                // User didn't provide dt, so use default:
+                // Use trajectory timestep as dt and just store data for all trajectory frames
+
+                real last_dt = corr->dt;
+
+                do {
+                    cur_dt = t - last_t;
+                    last_t = t;
+
+                    // Check for consistency of trajectory timestep 
+                    // (this is necessary for proper autocorrelation with default trajectory timestep, 
+                    // otherwise specify a timestep in corr->dt that is at least as large as the largest timestep
+                    // in the trajectory and is a multiple of all other timesteps in the trajectory)
+                    if(!GC_TIME_EQ(cur_dt, corr->dt) && ndata > 1) {
+                        gk_log_fatal(FARGS, "Inconsistent time step in frame %d of %s: dt is %f vs. previous dt of %f.\n", 
+                            ndata, fnames[efT_TRAJ], cur_dt, corr->dt);
+                    }
+                    else if(ndata == 1) {
+                        // Use the dt between the first two frames of the trajectory as the expected dt.
+                        corr->dt = cur_dt;
+                    }
+
+                    // TODO: Get vecs
+
+                    ++ndata;
+                } while(read_next_x(*oenv, status, &t,
+#ifndef GRO_V5 
+                    natoms,
+#endif
+                    x, box));
+
+                if(corr->nt < 0) {
+                    // User didn't provide nt, so use default which is
+                    // maximum possible number of correlation intervals
+                    corr->nt = ndata - 1;
+                }
+
+                // DEBUG
+                gk_print_log("dt is %f, nt is %f.\n", corr->dt, corr->nt);
+            } // if dt < 0
+            else {
+                // Only store the data in the trajectory intervals matching the given dt
+                /*
+                int cur_vec_ind = 0;
+
+                do {
+                    cur_dt += t - last_t;
+                    last_t = t;
+
+                    if(GC_TIME_EQ(cur_dt, corr->dt))
+
+                    ++ndata;
+                }
+                */
+            } // if dt >= 0
+        } // if natoms > 0
+        else {
+            gk_log_fatal(FARGS, "No atoms found in %s!\n", fnames[efT_TRAJ]);
+        }
 
         // Cleanup
-        sfree(t);
-        gk_free_traj(x, nframes, natoms);
-        sfree(box);
-    }*/
+        sfree(x);
+    } // if not memory limit
 
     // Cleanup
     gk_free_topology(&top);
@@ -197,5 +269,19 @@ void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, 
 // WARNING: this does not free any memory allocated for corr->atomnames.
 // Whoever allocated that memory is responsible for it! 
 void free_corr(struct corr_dat_t *corr) {
-    // TODO
+    if(corr->found_atoms)   sfree(corr->found_atoms);
+
+    if(corr->auto_corr) {
+        int total = 0;
+        for(int i = 0; i < corr->npairs; ++i) {
+            total += corr->natompairs[i];
+        }
+        for(int i = 0; i < total; ++i) {
+            sfree(corr->auto_corr[i]);
+        }
+        sfree(corr->auto_corr);
+    }
+
+    if(corr->natompairs)    sfree(corr->natompairs);
+    if(corr->s2)            sfree(corr->s2);
 }

@@ -55,6 +55,10 @@ struct corr_dat_t {
 };
 
 
+void init_corr_dat(corr_dat_t *corr);
+/* Initializes a corr_dat_t struct, such as setting pointers to NULL and setting default parameters.
+ */
+
 void get_pairs(t_atoms *atoms, t_ilist *bonds, // Input: Topology where atom-atom pairs will be searched.
                const char **atomnames, int npairs, // Input: Pairs of atom names to be searched for in topology.
                int natompairs[], // Output: Number of atom pairs found for each atom name pair in atomnames.
