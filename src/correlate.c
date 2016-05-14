@@ -19,18 +19,10 @@
 
 #define GCORR_ALLOC 10 // Initial amount by which to dynamically allocate array memory.
 
-void get_corr_pairs(t_atoms *atoms, t_ilist *bonds, // Input: Topology where atom-atom pairs will be searched.
-                    const char **atomnames, int npairs, // Input: Pairs of atom names to be searched for in topology.
-                    int natompairs[], // Output: Number of atom pairs found for each atom name pair in atomnames.
-                                      // Given buffer should be allocated to size npairs.
-                    int **pairs // Output 1D array of gromacs atom IDs of atom pairs. Memory is allocated for pairs.
-                                // The pairs array will be size 2 * sum(natompairs).
-                                // The members of a pair are adjacent.
-                                // The pairs are grouped by atom names, in the same order as given atomnames.
-                                // ie. for each atomnames pair i, there are natompairs[i] pairs of IDs in this pairs array,
-                                // or 2 * natompairs[i] elements.
-                                // The IDs in this array can be used to index into a gromacs trajectory associated with this topology.
-                    ) {
+void get_pairs(t_atoms *atoms, t_ilist *bonds,
+               const char **atomnames, int npairs,
+               int natompairs[],
+               int **pairs) {
     // Initialize number of pairs for each atomtype to zero.
     for(int i = 0; i < npairs; ++i) {
         natompairs[i] = 0;
@@ -153,24 +145,24 @@ void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, 
     // Get atom-atom pairs
     snew(corr->natompairs, corr->npairs);
 
-    get_corr_pairs(&top.atoms, &bonds, corr->atomnames, corr->npairs, corr->natompairs, &(corr->found_atoms));
+    get_pairs(&top.atoms, &bonds, corr->atomnames, corr->npairs, corr->natompairs, &(corr->found_atoms));
 
-    int total = 0;
+    int natoms_tot = 0;
     for(int i = 0; i < corr->npairs; ++i) {
-        total += corr->natompairs[i];
+        natoms_tot += corr->natompairs[i];
     }
 
     // DEBUG
     // Print found atom-atom pairs.
-    // for(int i = 0; i < total * 2; i+=2) {
-    //     printf("Pair %d: %d and %d, %s and %s, atomic #s %d and %d\n",
-    //         i/2, corr->found_atoms[i], corr->found_atoms[i+1], 
-    //         *(top.atoms.atomname[corr->found_atoms[i]]), *(top.atoms.atomname[corr->found_atoms[i+1]]), 
-    //         top.atoms.atom[corr->found_atoms[i]].atomnumber, top.atoms.atom[corr->found_atoms[i+1]].atomnumber);
-    // }
+    for(int i = 0; i < natoms_tot * 2; i+=2) {
+        printf("Pair %d: %d and %d, %s and %s, atomic #s %d and %d\n",
+            i/2, corr->found_atoms[i], corr->found_atoms[i+1], 
+            *(top.atoms.atomname[corr->found_atoms[i]]), *(top.atoms.atomname[corr->found_atoms[i+1]]), 
+            top.atoms.atom[corr->found_atoms[i]].atomnumber, top.atoms.atom[corr->found_atoms[i+1]].atomnumber);
+    }
+
 
     // Read trajectory and calculate junk
-    
 
     /*
     if(flags & C_MEM_LIMIT) {

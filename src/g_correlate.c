@@ -52,6 +52,9 @@ int main(int argc, char *argv[]) {
     const char *fnames[efT_NUMFILES];
     output_env_t oenv = NULL;
 
+    struct corr_dat_t corr;
+    corr.dt = -1; // -1 indicates default behavior
+    corr.nt = -1;
     char *pairnames = NULL;
     gmx_bool fft = FALSE;
     gmx_bool mem_limit;
@@ -73,6 +76,8 @@ int main(int argc, char *argv[]) {
 
     t_pargs pa[] = {
         {"-a", FALSE, etSTR, {&pairnames}, "Comma-delimited list of atom name pairs to use for calculating S2, supports wildcards (ex. 'N-H,ND2-H*,C*-H*')"},
+        {"-dt", FALSE, etREAL, {&(corr.dt)}, "The time delay step for the domain of the autocorrelation functions. The default is to use the trajectory's timestep."},
+        {"-nt", FALSE, etREAL, {&(corr.nt)}, "The number of time delays in the domain of the autocorrelation functions. The default is to go up to the length of the trajectory."},
         {"-fft", FALSE, etINT, {&fft}, "Use FFT for calculating S2."},
         {"-limit", FALSE, etBOOL, {&mem_limit}, "Limit number of trajectory frames loaded into memory. If false, whole trajectory is loaded at once."}
     };
@@ -94,8 +99,6 @@ int main(int argc, char *argv[]) {
 
 
     // Initialize autocorrelation parameters
-    
-    struct corr_dat_t corr;
     snew(corr.atomnames, strlen(pairnames));
 
     // Parse atom name pairs for autocorrelator input
