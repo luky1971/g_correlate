@@ -22,8 +22,9 @@
 #define GC_ALLOC 10 // Initial amount by which to dynamically allocate array memory.
 #define GC_TIME_EPS 0.000001 // Epsilon for comparing floating point time values
 
-// Test if two floating point time values are nearly equivalent
-#define GC_TIME_EQ(X, Y)   (((X) > ((Y) - GC_TIME_EPS)) && ((X) < ((Y) + GC_TIME_EPS)))
+// Test if two floating point values are nearly equivalent
+#define GC_FLT_EQ(X, Y, EPS)    (((X) > ((Y) - EPS)) && ((X) < ((Y) + EPS)))
+#define GC_TIME_EQ(X, Y)   GC_FLT_EQ(X, Y, GC_TIME_EPS)
 
 
 void init_corr_dat(struct corr_dat_t *corr) {
@@ -103,11 +104,10 @@ void get_pairs(const t_atoms *atoms, const t_ilist *bonds,
 
 
 void get_unit_vecs(const rvec x[], const int pairs[], int npairs, rvec unit_vecs[]) {
-    rvec temp, temp2;
+    rvec temp;
     for(int p = 0; p < npairs; ++p) {
         rvec_sub(x[pairs[2 * p + 1]], x[pairs[2 * p]], temp);
-        unitv(temp, temp2);
-        copy_rvec(temp2, unit_vecs[p]);
+        unitv(temp, unit_vecs[p]);
     }
 }
 
