@@ -14,6 +14,7 @@ CKUT = extern/ckut
 
 INCLUDE = include
 SRC = src
+TEST = test
 BUILD = build
 INSTALL = /usr/local/bin
 
@@ -45,22 +46,34 @@ MCFLAGS +='
 
 .PHONY: install clean
 
-$(BUILD)/g_correlate: $(BUILD)/g_correlate.o $(BUILD)/correlate.o
-	make CC=$(CC) CFLAGS=$(MCFLAGS) GROMACS=$(GROMACS) VGRO=$(VGRO) -C $(GKUT) \
-	&& $(CC) $(CFLAGS) -o $(BUILD)/g_correlate $(BUILD)/g_correlate.o $(BUILD)/correlate.o \
+all: g_correlate test
+
+g_correlate: g_correlate.o correlate.o gkut
+	$(CC) $(CFLAGS) -o $(BUILD)/g_correlate $(BUILD)/g_correlate.o $(BUILD)/correlate.o \
 	$(GKUT)/build/gkut_io.o $(GKUT)/build/gkut_log.o $(LINKGRO) $(LIBGRO) $(LIBS)
 
-install: $(BUILD)/g_correlate
+test: test_gcorr.o correlate.o gkut
+	$(CC) $(CFLAGS) -o $(BUILD)/test $(BUILD)/test_gcorr.o $(BUILD)/correlate.o \
+	$(GKUT)/build/gkut_io.o $(GKUT)/build/gkut_log.o $(LINKGRO) $(LIBGRO) $(LIBS)
+
+install: g_correlate
 	install $(BUILD)/g_correlate $(INSTALL)
 
-$(BUILD)/g_correlate.o: $(SRC)/g_correlate.c $(INCLUDE)/correlate.h $(INCLUDE)/correlate.h
+g_correlate.o: $(SRC)/g_correlate.c $(INCLUDE)/correlate.h $(INCLUDE)/correlate.h
 	$(CC) $(CFLAGS) -o $(BUILD)/g_correlate.o -c $(SRC)/g_correlate.c \
 	$(DEFS) -I$(INCLUDE) $(INCGRO) -I$(GKUT)/include -I$(CKUT)/include
 
-$(BUILD)/correlate.o: $(SRC)/correlate.c $(INCLUDE)/correlate.h
+correlate.o: $(SRC)/correlate.c $(INCLUDE)/correlate.h
 	$(CC) $(CFLAGS) -o $(BUILD)/correlate.o -c $(SRC)/correlate.c \
 	$(DEFS) -I$(INCLUDE) $(INCGRO) -I$(GKUT)/include -I$(CKUT)/include
 
+test_gcorr.o: $(TEST)/test_gcorr.c $(TEST)/minunit.h
+	$(CC) $(CFLAGS) -o $(BUILD)/test_gcorr.o -c $(TEST)/test_gcorr.c \
+	$(DEFS) -I$(INCLUDE) $(INCGRO) -I$(GKUT)/include -I$(CKUT)/include
+
+gkut:
+	make CC=$(CC) CFLAGS=$(MCFLAGS) GROMACS=$(GROMACS) VGRO=$(VGRO) -C $(GKUT)
+
 clean:
 	make clean -C $(GKUT) \
-	&& rm -f $(BUILD)/*.o $(BUILD)/g_correlate
+	&& rm -f $(BUILD)/*.o $(BUILD)/g_correlate $(BUILD)/test

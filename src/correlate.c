@@ -16,29 +16,33 @@
 
 #include "mtop_util.h" // dealing with topologies
 #include "smalloc.h" // memory stuff
+#include "vec.h" // vector ops for get_unit_vecs()
+
 
 #define GC_ALLOC 10 // Initial amount by which to dynamically allocate array memory.
 #define GC_TIME_EPS 0.000001 // Epsilon for comparing floating point time values
 
+// Test if two floating point time values are nearly equivalent
 #define GC_TIME_EQ(X, Y)   (((X) > ((Y) - GC_TIME_EPS)) && ((X) < ((Y) + GC_TIME_EPS)))
 
-void init_corr_dat(corr_dat_t *corr) {
+
+void init_corr_dat(struct corr_dat_t *corr) {
     corr->atomnames = NULL;
-    corr->npairs = 0;
+    corr->nnamepairs = 0;
     corr->dt = -1;
     corr->nt = -1;
     corr->found_atoms = NULL;
     corr->natompairs = NULL;
     corr->auto_corr = NULL;
-    corr->s2 = NULL:
+    corr->s2 = NULL;
 }
 
-void get_pairs(t_atoms *atoms, t_ilist *bonds,
-               const char **atomnames, int npairs,
+void get_pairs(const t_atoms *atoms, const t_ilist *bonds,
+               const char **atomnames, int nnamepairs,
                int natompairs[],
                int **pairs) {
     // Initialize number of pairs for each atomtype to zero.
-    for(int i = 0; i < npairs; ++i) {
+    for(int i = 0; i < nnamepairs; ++i) {
         natompairs[i] = 0;
     }
 
@@ -48,7 +52,7 @@ void get_pairs(t_atoms *atoms, t_ilist *bonds,
     snew(*pairs, cur_alloc);
     int pair_a, pair_b;
     // Loop through the given atom name pairs.
-    for(int ai = 0; ai < npairs; ++ai) {
+    for(int ai = 0; ai < nnamepairs; ++ai) {
         // Loop through all bond pairs in the system and search for instances of the current atom name pair.
         // This loop is run for each atom name pair to keep the found pairs in the same order as atomtypes.
         // This nested loop isn't as bad as it looks; the number of atom name pairs is usually only 1 or 2.
@@ -95,6 +99,16 @@ void get_pairs(t_atoms *atoms, t_ilist *bonds,
     }
     
     srenew(*pairs, pair_ind * 2); // Free any excess memory in pairs.
+}
+
+
+void get_unit_vecs(const rvec x[], const int pairs[], int npairs, rvec unit_vecs[]) {
+    rvec temp, temp2;
+    for(int p = 0; p < npairs; ++p) {
+        rvec_sub(x[pairs[2 * p + 1]], x[pairs[2 * p]], temp);
+        unitv(temp, temp2);
+        copy_rvec(temp2, unit_vecs[p]);
+    }
 }
 
 
@@ -157,12 +171,12 @@ void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, 
 
 
     // Get atom-atom pairs
-    snew(corr->natompairs, corr->npairs);
+    snew(corr->natompairs, corr->nnamepairs);
 
-    get_pairs(&top.atoms, &bonds, corr->atomnames, corr->npairs, corr->natompairs, &(corr->found_atoms));
+    get_pairs(&top.atoms, &bonds, corr->atomnames, corr->nnamepairs, corr->natompairs, &(corr->found_atoms));
 
     int natoms_tot = 0;
-    for(int i = 0; i < corr->npairs; ++i) {
+    for(int i = 0; i < corr->nnamepairs; ++i) {
         natoms_tot += corr->natompairs[i];
     }
 
@@ -273,7 +287,7 @@ void free_corr(struct corr_dat_t *corr) {
 
     if(corr->auto_corr) {
         int total = 0;
-        for(int i = 0; i < corr->npairs; ++i) {
+        for(int i = 0; i < corr->nnamepairs; ++i) {
             total += corr->natompairs[i];
         }
         for(int i = 0; i < total; ++i) {

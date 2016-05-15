@@ -53,8 +53,8 @@ int main(int argc, char *argv[]) {
     output_env_t oenv = NULL;
 
     struct corr_dat_t corr;
-    corr.dt = -1; // -1 indicates default behavior
-    corr.nt = -1;
+    init_corr_dat(&corr); // set default values
+
     char *pairnames = NULL;
     gmx_bool fft = FALSE;
     gmx_bool mem_limit;
@@ -111,11 +111,11 @@ int main(int argc, char *argv[]) {
         gk_log_fatal(FARGS, "A specified atom name (in option -a) is unpaired!\n");
 
     srenew(corr.atomnames, nwords); // Free excess memory
-    corr.npairs = nwords / 2;
+    corr.nnamepairs = nwords / 2;
 
     // DEBUG
-    // printf("%d pairs parsed.\n", corr.npairs);
-    // for(int i = 0; i < corr.npairs; ++i) {
+    // printf("%d pairs parsed.\n", corr.nnamepairs);
+    // for(int i = 0; i < corr.nnamepairs; ++i) {
     //     printf("%s and %s\n", corr.atomnames[2*i], corr.atomnames[2*i+1]);
     // }
 
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
     // TODO: calculate S2, print results, and whatnot!
 
     // Cleanup
-    free_corr(&corr);
+    // free_corr(&corr);
     sfree(corr.atomnames);
 
 #ifdef GTA_BENCH
