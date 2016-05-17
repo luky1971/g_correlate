@@ -46,7 +46,7 @@ void gc_init_corr_dat(struct gcorr_dat_t *corr) {
     corr->nnamepairs = 0;
     corr->dt = -1;
     corr->nt = -1;
-    corr->found_atoms = NULL;
+    corr->atompairs = NULL;
     corr->natompairs = NULL;
     corr->auto_corr = NULL;
     corr->s2 = NULL;
@@ -57,7 +57,7 @@ void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds,
                const char **atomnames, int nnamepairs,
                int natompairs[],
                int **pairs) {
-    // Initialize number of pairs for each atomtype to zero.
+    // Initialize number of pairs for each pair of atom names to zero.
     for(int i = 0; i < nnamepairs; ++i) {
         natompairs[i] = 0;
     }
@@ -70,7 +70,7 @@ void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds,
     // Loop through the given atom name pairs.
     for(int ai = 0; ai < nnamepairs; ++ai) {
         // Loop through all bond pairs in the system and search for instances of the current atom name pair.
-        // This loop is run for each atom name pair to keep the found pairs in the same order as atomtypes.
+        // This loop is run for each atom name pair to keep the found pairs in the same order as atomnames.
         // This nested loop isn't as bad as it looks; the number of atom name pairs is usually only 1 or 2.
         for(int bi = 0; bi < bonds->nr; bi+=3) {
             pair_a = -1; // -1 means atom not found
@@ -108,13 +108,110 @@ void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds,
                 // Add the found atom-atom pair to the pairs array.
                 (*pairs)[pair_ind++] = pair_a;
                 (*pairs)[pair_ind++] = pair_b;
-                // Increment number of pairs for current atomtype.
+                // Increment number of pairs for current atomnames.
                 ++(natompairs[ai]);
             }
         }
     }
     
     srenew(*pairs, pair_ind * 2); // Free any excess memory in pairs.
+}
+
+
+int gc_traj2uvecs(const char *traj_fname, 
+				  output_env_t *oenv, 
+				  real *dt, 
+				  int atompairs[], int npairs, 
+				  rvec ***unit_vecs) {
+	rvec *x;
+    t_trxstatus *status = NULL;
+    int natoms = 0;
+    real t = 0.0;
+    matrix box;
+
+    int nframes = 0;
+
+    int cur_alloc = GC_FRAME_ALLOC;
+
+    // allocate memory for unit vectors
+    snew(*unit_vecs, cur_alloc);
+
+    natoms = read_first_x(*oenv, &status, traj_fname, &t, &x, box);
+
+    if(natoms > 0) {
+        real cur_dt = 0.0;
+        real last_t = t;
+
+        if(*dt < 0) {
+            // User didn't provide dt, so use default:
+            // Use trajectory timestep as dt and just store data for all trajectory frames
+
+            real last_dt = *dt;
+
+            do {
+                cur_dt = t - last_t;
+                last_t = t;
+
+                // Check for consistency of trajectory timestep 
+                // (this is necessary for proper autocorrelation with default trajectory timestep, 
+                // otherwise specify a timestep in dt that is at least as large as the largest timestep
+                // in the trajectory and is a multiple of all other timesteps in the trajectory)
+                if(!GC_TIME_EQ(cur_dt, *dt) && nframes > 1) {
+                    gk_log_fatal(FARGS, "Inconsistent time step in frame %d of %s: dt is %f vs. previous dt of %f.\n", 
+                        nframes, traj_fname, cur_dt, *dt);
+                }
+                else if(nframes == 1) {
+                    // Use the dt between the first two frames of the trajectory as the expected dt.
+                    *dt = cur_dt;
+                }
+
+                // Expand memory if needed
+                if(nframes + 1 > cur_alloc) {
+                	cur_alloc *= 2;
+                	srenew(*unit_vecs, cur_alloc);
+                }
+
+                // Get unit vectors for the atom pairs in this frame
+                snew((*unit_vecs)[nframes], npairs);
+                for(int p = 0; p < npairs; ++p) {
+                    gc_get_unit_vec(x, atompairs[2 * p], atompairs[2 * p + 1], (*unit_vecs)[nframes][p]);
+                }
+
+                ++nframes;
+
+            } while(read_next_x(*oenv, status, &t,
+#ifndef GRO_V5 
+                natoms,
+#endif
+                x, box));
+        } // if dt < 0
+        else { // if provided dt >= 0
+            // Only store the data in the trajectory intervals matching the given dt
+            /*
+            int cur_vec_ind = 0;
+
+            do {
+                cur_dt += t - last_t;
+                last_t = t;
+
+                if(GC_TIME_EQ(cur_dt, *dt))
+
+                ++nframes;
+            }
+            */
+        } // if provided dt >= 0
+    } // if natoms > 0
+    else {
+        gk_log_fatal(FARGS, "No atoms found in %s!\n", traj_fname);
+    }
+
+    // Done with trajectory
+    close_trx(status);
+    sfree(x);
+
+    srenew(*unit_vecs, nframes); // free excess memory
+
+    return nframes;
 }
 
 
@@ -191,9 +288,10 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
 
     // Get atom-atom pairs
     snew(corr->natompairs, corr->nnamepairs);
+    gc_get_pairs(&top.atoms, &bonds, corr->atomnames, corr->nnamepairs, corr->natompairs, &(corr->atompairs));
 
-    gc_get_pairs(&top.atoms, &bonds, corr->atomnames, corr->nnamepairs, corr->natompairs, &(corr->found_atoms));
 
+    // Calculate total number of pairs
     int npairs_tot = 0;
     for(int i = 0; i < corr->nnamepairs; ++i) {
         npairs_tot += corr->natompairs[i];
@@ -203,112 +301,26 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     // Print found atom-atom pairs.
     for(int i = 0; i < npairs_tot * 2; i+=2) {
         printf("Pair %d: %d and %d, %s and %s, atomic #s %d and %d\n",
-            i/2, corr->found_atoms[i], corr->found_atoms[i+1], 
-            *(top.atoms.atomname[corr->found_atoms[i]]), *(top.atoms.atomname[corr->found_atoms[i+1]]), 
-            top.atoms.atom[corr->found_atoms[i]].atomnumber, top.atoms.atom[corr->found_atoms[i+1]].atomnumber);
+            i/2, corr->atompairs[i], corr->atompairs[i+1], 
+            *(top.atoms.atomname[corr->atompairs[i]]), *(top.atoms.atomname[corr->atompairs[i+1]]), 
+            top.atoms.atom[corr->atompairs[i]].atomnumber, top.atoms.atom[corr->atompairs[i+1]].atomnumber);
     }
+
 
     // Done with topology
     gk_free_topology(&top);
 
 
-    // Read trajectory and calculate junk
-
-    rvec *x;
-    t_trxstatus *status = NULL;
-    int natoms = 0;
-    real t = 0.0;
-    matrix box;
-
-    int nframes = 0;
-
+    // Read trajectory and get unit vectors for atom pairs
     rvec **unit_vecs;
-    int cur_alloc = GC_FRAME_ALLOC;
-
-    // allocate memory for unit vectors
-    snew(unit_vecs, cur_alloc);
-
-    natoms = read_first_x(*oenv, &status, fnames[efT_TRAJ], &t, &x, box);
-
-    if(natoms > 0) {
-        real cur_dt = 0.0;
-        real last_t = t;
-
-        if(corr->dt < 0) {
-            // User didn't provide dt, so use default:
-            // Use trajectory timestep as dt and just store data for all trajectory frames
-
-            real last_dt = corr->dt;
-
-            do {
-                cur_dt = t - last_t;
-                last_t = t;
-
-                // Check for consistency of trajectory timestep 
-                // (this is necessary for proper autocorrelation with default trajectory timestep, 
-                // otherwise specify a timestep in corr->dt that is at least as large as the largest timestep
-                // in the trajectory and is a multiple of all other timesteps in the trajectory)
-                if(!GC_TIME_EQ(cur_dt, corr->dt) && nframes > 1) {
-                    gk_log_fatal(FARGS, "Inconsistent time step in frame %d of %s: dt is %f vs. previous dt of %f.\n", 
-                        nframes, fnames[efT_TRAJ], cur_dt, corr->dt);
-                }
-                else if(nframes == 1) {
-                    // Use the dt between the first two frames of the trajectory as the expected dt.
-                    corr->dt = cur_dt;
-                }
-
-                // Expand memory if needed
-                if(nframes + 1 > cur_alloc) {
-                	cur_alloc *= 2;
-                	srenew(unit_vecs, cur_alloc);
-                }
-
-                // Get unit vectors for the atom pairs in this frame
-                snew(unit_vecs[nframes], npairs_tot);
-                for(int p = 0; p < npairs_tot; ++p) {
-                    gc_get_unit_vec(x, corr->found_atoms[2 * p], corr->found_atoms[2 * p + 1], unit_vecs[nframes][p]);
-                }
-
-                ++nframes;
-
-            } while(read_next_x(*oenv, status, &t,
-#ifndef GRO_V5 
-                natoms,
-#endif
-                x, box));
-
-            if(corr->nt < 0) {
-                // User didn't provide nt, so use default which is
-                // maximum possible number of correlation intervals
-                corr->nt = nframes - 1;
-            }
-
-        } // if dt < 0
-        else { // if provided dt >= 0
-            // Only store the data in the trajectory intervals matching the given dt
-            /*
-            int cur_vec_ind = 0;
-
-            do {
-                cur_dt += t - last_t;
-                last_t = t;
-
-                if(GC_TIME_EQ(cur_dt, corr->dt))
-
-                ++nframes;
-            }
-            */
-        } // if provided dt >= 0
-    } // if natoms > 0
-    else {
-        gk_log_fatal(FARGS, "No atoms found in %s!\n", fnames[efT_TRAJ]);
+    int nframes = gc_traj2uvecs(fnames[efT_TRAJ], oenv, &(corr->dt), corr->atompairs, npairs_tot, &unit_vecs);
+    
+    // Set default nt if needed
+    if(corr->nt < 0) {
+        // User didn't provide nt, so use default which is
+        // maximum possible number of correlation intervals
+        corr->nt = nframes - 1;
     }
-
-    // Done with trajectory
-    close_trx(status);
-    sfree(x);
-
-    srenew(unit_vecs, nframes); // free excess memory
 
     // DEBUG
     gk_print_log("dt is %f, nt is %d.\n", corr->dt, corr->nt);
@@ -354,7 +366,7 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     // print unit vecs
     FILE *vecf2 = fopen("vecs_pbyf.txt", "w");
     for(int p = 0; p < npairs_tot; ++p) {
-        fprintf(vecf2, "\nPair %d, atoms %d and %d:\n", p, corr->found_atoms[2 * p], corr->found_atoms[2 * p + 1]);
+        fprintf(vecf2, "\nPair %d, atoms %d and %d:\n", p, corr->atompairs[2 * p], corr->atompairs[2 * p + 1]);
         for(int fr = 0; fr < nframes; ++fr) {
             fprintf(vecf2, "Frame %d: %f, %f, %f\n", fr, unit_vecs[p][fr][XX], unit_vecs[p][fr][YY], unit_vecs[p][fr][ZZ]);
         }
@@ -385,16 +397,25 @@ void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, const char *
 	if(corr_fname) {
 		FILE *f = fopen(corr_fname, "w");
 		int p = 0;
+
 		for(int np = 0; np < corr->nnamepairs; ++np) {
-			fprintf(f, "# PAIR %s-%s:\n", corr->atomnames[2*np], corr->atomnames[2*np+1]);
+			fprintf(f, "# PAIR %s-%s:\n", 
+				corr->atomnames[2*np], corr->atomnames[2*np+1]);
 			int i;
+
 			for(i = 0; i < corr->natompairs[np]; ++i) {
-				fprintf(f, "# Atom %d and %d:\n# t\tautocorrelation\n", corr->found_atoms[2*(p+i)], corr->found_atoms[2*(p+i)+1]);
-				fprintf(f, "%f\t%f\n", 0.0, 1.0);
+				fprintf(f, "# Atom %d and %d:\n", 
+					corr->atompairs[2*(p+i)], corr->atompairs[2*(p+i)+1]);
+				fprintf(f, "# t\tautocorrelation\n");
+				fprintf(f, "%f\t%f\n", 
+					0.0, 1.0);
+
 				for(int t = 1; t <= corr->nt; ++t) {
-					fprintf(f, "%f\t%f\n", t * corr->dt, corr->auto_corr[p+i][t-1]);
+					fprintf(f, "%f\t%f\n", 
+						t * corr->dt, corr->auto_corr[p+i][t-1]);
 				}
 			}
+
 			p += i;
 		}
 		fprintf(f, "\n");
@@ -407,7 +428,7 @@ void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, const char *
 
 
 void gc_free_corr(struct gcorr_dat_t *corr) {
-    if(corr->found_atoms)   sfree(corr->found_atoms);
+    if(corr->atompairs)   sfree(corr->atompairs);
 
     if(corr->auto_corr) {
         int total = 0;

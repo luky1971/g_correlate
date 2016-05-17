@@ -56,12 +56,12 @@ struct gcorr_dat_t {
              // and the default for nt is to go up to the length of the trajectory.
              // See auto_corr below for more info on dt and nt.
 
-    int *found_atoms; // Gromacs IDs of the atoms found in the trajectory corresponding to the atom name pairs in atomnames.
-                      // Size 2 * sum(natompairs). Members of a pair are adjacent.
-                      // Atom pairs are grouped in the same order as the names in atomnames.
+    int *atompairs; // Gromacs IDs of the atoms found in the trajectory corresponding to the atom name pairs in atomnames.
+                    // Size 2 * sum(natompairs). Members of a pair are adjacent.
+                    // Atom pairs are grouped in the same order as the names in atomnames.
     int *natompairs; // number of atom pairs found for each atom name pair in atomnames, in same order. Size nnamepairs.
 
-    // Each array in auto_corr[] and value in s2[] corresponds to an atom pair in the same order as found_atoms
+    // Each array in auto_corr[] and value in s2[] corresponds to an atom pair in the same order as atompairs
     // and are grouped by atom name in the same order as they are specified in atomnames.
     // ie. for each atomnames pair i, there are natompairs[i] autocorrelation values in auto_corr[i],
     // followed by natompairs[i+1] autocorrelation values in auto_corr[i+1] for pair i + 1, and so on until i + x = sum(natompairs).
@@ -82,23 +82,40 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
  */
 
 void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds, // Input: Topology where atom-atom pairs will be searched.
-               const char **atomnames, int nnamepairs, // Input: Pairs of atom names to be searched for in topology.
-               int natompairs[], // Output: Number of atom pairs found for each atom name pair in atomnames.
-                                 // Given buffer should be allocated to size nnamepairs.
-               int **pairs); // Output 1D array of gromacs atom IDs of atom pairs. Memory is allocated for pairs.
-                             // The pairs array will be size 2 * sum(natompairs).
-                             // The members of a pair are adjacent.
-                             // The pairs are grouped by atom names, in the same order as given atomnames.
-                             // ie. for each atomnames pair i, there are natompairs[i] pairs of IDs in this pairs array,
-                             // or 2 * natompairs[i] elements.
-                             // The IDs in this array can be used to index into a gromacs trajectory associated with this topology.
+                  const char **atomnames, int nnamepairs, // Input: Pairs of atom names to be searched for in topology.
+                  int natompairs[], // Output: Number of atom pairs found for each atom name pair in atomnames.
+                                    // Given buffer should be allocated to size nnamepairs.
+                  int **pairs); // Output 1D array of gromacs atom IDs of atom pairs. Memory is allocated for pairs.
+                                // The pairs array will be size 2 * sum(natompairs).
+                                // The members of a pair are adjacent.
+                                // The pairs are grouped by atom names, in the same order as given atomnames.
+                                // ie. for each atomnames pair i, there are natompairs[i] pairs of IDs in this pairs array,
+                                // or 2 * natompairs[i] elements.
+                                // The IDs in this array can be used to index into a gromacs trajectory associated with this topology.
 
 void gc_calc_ac(const rvec *vecs, int nvecs, real nt, real *auto_corr);
 /* Calculates the autocorrelation function for a trajectory of vectors
  * and stores the results in auto_corr. auto_corr should be pre-allocated to size nt.
  */
 
+int gc_traj2uvecs(const char *traj_fname, 
+                  output_env_t *oenv, 
+                  real *dt, 
+                  int atompairs[], int npairs, 
+                  rvec ***unit_vecs);
+/* Calculates the unit vectors between the pairs of atoms given in atompairs in the trajectory traj_fname,
+ * storing the resulting vectors in unit_vecs and returning the number of frames of vectors stored.
+ * Memory is allocated for unit_vecs, which will be size nframes x npairs, where nframes is the function's return value.
+ * The number of frames returned is not necessarily equal to the number of frames in the trajectory, 
+ * as the frames between every dt timestep are skipped.
+ * dt should NOT be NULL. The pointed value should be -1 to use the trajectory's timestep, which will be saved to dt.
+ * Otherwise, the given dt value should be a multiple of the trajectory's timestep.
+ */
+
 void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, const char *s2_fname);
+/* Outputs the given autocorrelation and s2 data to files with the given names.
+ * Either corr_fname or s2_fname can be NULL to not output the corresponding data.
+ */
 
 void gc_free_corr(struct gcorr_dat_t *corr);
 /* Frees the dynamic memory in a gcorr_dat_t struct.
