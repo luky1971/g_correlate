@@ -187,18 +187,45 @@ int gc_traj2uvecs(const char *traj_fname,
         } // if dt < 0
         else { // if provided dt >= 0
             // Only store the data in the trajectory intervals matching the given dt
-            /*
-            int cur_vec_ind = 0;
+
+            last_t = t - *dt; // so that the first trajectory frame will pass dt boundary check
+            int trajframe = 0;
 
             do {
-                cur_dt += t - last_t;
-                last_t = t;
+                cur_dt = t - last_t;
 
-                if(GC_TIME_EQ(cur_dt, *dt))
+                // if this trajectory frame is not on a dt boundary, skip it
+                if(GC_TIME_EQ(cur_dt, *dt)) {
+                	// Expand memory if needed
+	                if(nframes + 1 > cur_alloc) {
+	                	cur_alloc *= 2;
+	                	srenew(*unit_vecs, cur_alloc);
+	                }
 
-                ++nframes;
-            }
-            */
+                	// Get unit vectors for the atom pairs in this frame
+                	snew((*unit_vecs)[nframes], npairs);
+	                for(int p = 0; p < npairs; ++p) {
+	                    gc_get_unit_vec(x, atompairs[2 * p], atompairs[2 * p + 1], (*unit_vecs)[nframes][p]);
+	                }
+
+                	// Reset timestep counter
+                	last_t = t;
+
+                	++nframes;
+                }
+                else if(cur_dt > *dt) {
+                	gk_log_fatal(FARGS, "Error at frame %d of %s: "
+                		"given dt = %f is not a multiple of the trajectory timestep, "
+                		"or the trajectory has inconsistent timesteps.\n", 
+                        trajframe, traj_fname, *dt);
+                }
+
+                ++trajframe;
+            } while(read_next_x(*oenv, status, &t,
+#ifndef GRO_V5 
+            	natoms,
+#endif
+                x, box));
         } // if provided dt >= 0
     } // if natoms > 0
     else {
@@ -320,6 +347,12 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
         // User didn't provide nt, so use default which is
         // maximum possible number of correlation intervals
         corr->nt = nframes - 1;
+    }
+
+    if(corr->nt >= nframes) {
+    	gk_log_fatal(FARGS, 
+    		"Given nt, %d, will cause largest time delay nt * dt = %f, to be longer than trajectory %s!\n", 
+    		corr->nt, corr->nt * corr->dt, fnames[efT_TRAJ]);
     }
 
     // DEBUG

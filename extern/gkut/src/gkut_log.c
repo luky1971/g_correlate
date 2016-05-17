@@ -13,10 +13,11 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
-#include "gmx_fatal.h"
 
 static FILE *out_log = NULL;
+static const char *error_prefix = "Fatal error in source file %s line %d:\n";
 
 void gk_init_log(const char *logfile, int argc, char *argv[]) {
 	out_log = fopen(logfile, "a");
@@ -31,8 +32,6 @@ void gk_init_log(const char *logfile, int argc, char *argv[]) {
 	fprintf(out_log, "\nRun: %d-%d-%d %d:%d:%d\n", 
 		ltime->tm_mon + 1, ltime->tm_mday, ltime->tm_year + 1900, 
 		ltime->tm_hour, ltime->tm_min, ltime->tm_sec);
-
-	gmx_fatal_set_log_file(out_log);
 }
 
 void gk_close_log() {
@@ -53,13 +52,21 @@ void gk_print_log(char const *fmt, ...) {
 
 void gk_log_fatal(int fatal_errno, const char *file, int line, char const *fmt, ...) {
 	va_list arg;
+
+	va_start(arg, fmt);
+	printf(error_prefix, file, line);
+	vprintf(fmt, arg);
+	va_end(arg);
+
 	if(out_log != NULL) {
 		va_start(arg, fmt);
-		fprintf(out_log, "Fatal error in source file %s line %d: ", file, line);
+		fprintf(out_log, error_prefix, file, line);
 		vfprintf(out_log, fmt, arg);
 		va_end(arg);
 	}
-	va_start(arg, fmt);
-	gmx_fatal(fatal_errno, file, line, fmt, arg);
-	va_end(arg);
+	// not using Gromacs's gmx_fatal function because it wasn't displaying data properly
+	// va_start(arg, fmt);
+	// gmx_fatal(fatal_errno, file, line, fmt, arg);
+	// va_end(arg);
+	exit(EXIT_FAILURE);
 }
