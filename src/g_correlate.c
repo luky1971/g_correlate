@@ -52,8 +52,8 @@ int main(int argc, char *argv[]) {
     const char *fnames[efT_NUMFILES];
     output_env_t oenv = NULL;
 
-    struct corr_dat_t corr;
-    init_corr_dat(&corr); // set default values
+    struct gcorr_dat_t corr;
+    gc_init_corr_dat(&corr); // set default values
 
     char *pairnames = NULL;
     gmx_bool fft = FALSE;
@@ -120,12 +120,12 @@ int main(int argc, char *argv[]) {
     // }
 
     // Run autocorrelation and S2 calculation
-    calc_ac(fnames, &oenv, &corr, flags);
+    gc_correlate(fnames, &oenv, &corr, flags);
 
     // TODO: calculate S2, print results, and whatnot!
 
     // Cleanup
-    // free_corr(&corr);
+    // gc_free_corr(&corr);
     sfree(corr.atomnames);
 
 #ifdef GTA_BENCH

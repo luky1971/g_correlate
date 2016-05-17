@@ -16,7 +16,7 @@
 
 #include "mtop_util.h" // dealing with topologies
 #include "smalloc.h" // memory stuff
-#include "vec.h" // vector ops for get_unit_vecs()
+#include "vec.h" // vector ops for gc_get_unit_vecs()
 
 
 #define GC_PAIR_ALLOC 10 // Initial amount by which to dynamically allocate array memory for atom pairs.
@@ -28,7 +28,7 @@
 #define GC_TIME_EQ(X, Y)   GC_FLT_EQ(X, Y, GC_TIME_EPS)
 
 
-void init_corr_dat(struct corr_dat_t *corr) {
+void gc_init_corr_dat(struct gcorr_dat_t *corr) {
     corr->atomnames = NULL;
     corr->nnamepairs = 0;
     corr->dt = -1;
@@ -39,7 +39,7 @@ void init_corr_dat(struct corr_dat_t *corr) {
     corr->s2 = NULL;
 }
 
-void get_pairs(const t_atoms *atoms, const t_ilist *bonds,
+void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds,
                const char **atomnames, int nnamepairs,
                int natompairs[],
                int **pairs) {
@@ -104,7 +104,7 @@ void get_pairs(const t_atoms *atoms, const t_ilist *bonds,
 }
 
 
-void get_unit_vecs(const rvec x[], const int pairs[], int npairs, rvec unit_vecs[]) {
+void gc_get_unit_vecs(const rvec x[], const int pairs[], int npairs, rvec unit_vecs[]) {
     rvec temp;
     for(int p = 0; p < npairs; ++p) {
         rvec_sub(x[pairs[2 * p + 1]], x[pairs[2 * p]], temp);
@@ -113,7 +113,7 @@ void get_unit_vecs(const rvec x[], const int pairs[], int npairs, rvec unit_vecs
 }
 
 
-void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, unsigned long flags) {
+void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *corr, unsigned long flags) {
     // Get topology data
     t_topology top;
 
@@ -174,7 +174,7 @@ void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, 
     // Get atom-atom pairs
     snew(corr->natompairs, corr->nnamepairs);
 
-    get_pairs(&top.atoms, &bonds, corr->atomnames, corr->nnamepairs, corr->natompairs, &(corr->found_atoms));
+    gc_get_pairs(&top.atoms, &bonds, corr->atomnames, corr->nnamepairs, corr->natompairs, &(corr->found_atoms));
 
     int npairs_tot = 0;
     for(int i = 0; i < corr->nnamepairs; ++i) {
@@ -251,7 +251,7 @@ void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, 
                     // Get unit vectors for the atom pairs in this frame
                     snew(unit_vecs[nframes], npairs_tot);
 
-                    get_unit_vecs(x, corr->found_atoms, npairs_tot, unit_vecs[nframes]);
+                    gc_get_unit_vecs(x, corr->found_atoms, npairs_tot, unit_vecs[nframes]);
 
                     ++nframes;
 
@@ -268,7 +268,7 @@ void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, 
                 }
 
             } // if dt < 0
-            else {
+            else { // if provided dt >= 0
                 // Only store the data in the trajectory intervals matching the given dt
                 /*
                 int cur_vec_ind = 0;
@@ -282,7 +282,7 @@ void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, 
                     ++nframes;
                 }
                 */
-            } // if dt >= 0
+            } // if provided dt >= 0
         } // if natoms > 0
         else {
             gk_log_fatal(FARGS, "No atoms found in %s!\n", fnames[efT_TRAJ]);
@@ -319,7 +319,7 @@ void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, 
 
 // WARNING: this does not free any memory allocated for corr->atomnames.
 // Whoever allocated that memory is responsible for it! 
-void free_corr(struct corr_dat_t *corr) {
+void gc_free_corr(struct gcorr_dat_t *corr) {
     if(corr->found_atoms)   sfree(corr->found_atoms);
 
     if(corr->auto_corr) {

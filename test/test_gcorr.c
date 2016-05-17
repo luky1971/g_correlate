@@ -35,7 +35,7 @@ static char *test_unit_vecs() {
 
 	rvec unit_vecs[NPAIRS];
 
-	get_unit_vecs(x, pairs, NPAIRS, unit_vecs);
+	gc_get_unit_vecs(x, pairs, NPAIRS, unit_vecs);
 
 	rvec exp[NPAIRS];
 

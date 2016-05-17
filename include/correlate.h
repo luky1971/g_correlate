@@ -30,7 +30,7 @@ enum {
 };
 
 
-struct corr_dat_t {
+struct gcorr_dat_t {
     const char **atomnames; // INPUT: the target atom name pairs to be tracked in autocorrelation. Size 2 * nnamepairs.
                             // Should be formatted as a linear array of pairs, with two adjacent atom name strings corresponding to a pair.
                             // Supports wildcards.
@@ -55,11 +55,11 @@ struct corr_dat_t {
 };
 
 
-void init_corr_dat(struct corr_dat_t *corr);
-/* Initializes a corr_dat_t struct, such as setting pointers to NULL and setting default parameters.
+void gc_init_corr_dat(struct gcorr_dat_t *corr);
+/* Initializes a gcorr_dat_t struct, such as setting pointers to NULL and setting default parameters.
  */
 
-void get_pairs(const t_atoms *atoms, const t_ilist *bonds, // Input: Topology where atom-atom pairs will be searched.
+void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds, // Input: Topology where atom-atom pairs will be searched.
                const char **atomnames, int nnamepairs, // Input: Pairs of atom names to be searched for in topology.
                int natompairs[], // Output: Number of atom pairs found for each atom name pair in atomnames.
                                  // Given buffer should be allocated to size nnamepairs.
@@ -71,19 +71,19 @@ void get_pairs(const t_atoms *atoms, const t_ilist *bonds, // Input: Topology wh
                              // or 2 * natompairs[i] elements.
                              // The IDs in this array can be used to index into a gromacs trajectory associated with this topology.
 
-void get_unit_vecs(const rvec x[], const int pairs[], int npairs, rvec unit_vecs[]);
+void gc_get_unit_vecs(const rvec x[], const int pairs[], int npairs, rvec unit_vecs[]);
 /* Calculates the unit vector formed between the points in each pair in the given array of points.
  * Pairs are specified by indexes into the array of points x.
  * The resulting unit vectors are stored in unit_vecs in the same order as pairs[].
  * unit_vecs should be pre-allocated to size npairs.
  */
 
-void calc_ac(const char *fnames[], output_env_t *oenv, struct corr_dat_t *corr, unsigned long flags);
+void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *corr, unsigned long flags);
 /* Calculates the autocorrelation functions for the trajectory in fnames[efT_TRAJ] using the topology in fnames[efT_TOP].
  */
 
-void free_corr(struct corr_dat_t *corr);
-/* Frees the dynamic memory in a corr_dat_t struct.
+void gc_free_corr(struct gcorr_dat_t *corr);
+/* Frees the dynamic memory in a gcorr_dat_t struct.
  */
 
 #endif // CORRELATE_H
