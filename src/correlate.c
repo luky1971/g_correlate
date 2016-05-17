@@ -200,14 +200,11 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
 
         int nframes = 0;
 
-        rvec **unit_vecs; // unit vectors will be stored by [pair][frame] for better cache locality when calculating autocorrelation
+        rvec **unit_vecs;
         int cur_alloc = GC_FRAME_ALLOC;
 
         // allocate memory for unit vectors
-        snew(unit_vecs, npairs_tot);
-        for(int p = 0; p < npairs_tot; ++p) {
-            snew(unit_vecs[p], cur_alloc);
-        }
+        snew(unit_vecs, cur_alloc);
 
         natoms = read_first_x(*oenv, &status, fnames[efT_TRAJ], &t, &x, box);
 
@@ -222,8 +219,6 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
                 real last_dt = corr->dt;
 
                 do {
-                    printf("Frame %d", nframes);
-                    
                     cur_dt = t - last_t;
                     last_t = t;
 
@@ -240,23 +235,19 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
                         corr->dt = cur_dt;
                     }
 
-                    // Get unit vectors for the atom pairs in this frame
-                    for(int p = 0; p < npairs_tot; ++p) {
-                        // Expand memory for unit vectors if needed
-                        if(nframes + 1 > cur_alloc) {
-                            cur_alloc *= 2;
-                            srenew(unit_vecs[p], cur_alloc);
-                            if(unit_vecs[p] == NULL)
-                                gk_log_fatal(FARGS, "Failed to allocate memory for unit vectors at frame %d.\n", nframes);
-                        }
+                    // Expand memory if needed
+                    if(nframes + 1 > cur_alloc) {
+                    	cur_alloc *= 2;
+                    	srenew(unit_vecs, cur_alloc);
+                    }
 
-                        gc_get_unit_vec(x, corr->found_atoms[2 * p], corr->found_atoms[2 * p + 1], unit_vecs[p][nframes]);
-                        // why this particular 2d array layout for unit_vecs? see unit_vecs declaration comment
+                    // Get unit vectors for the atom pairs in this frame
+                    snew(unit_vecs[nframes], npairs_tot);
+                    for(int p = 0; p < npairs_tot; ++p) {
+                        gc_get_unit_vec(x, corr->found_atoms[2 * p], corr->found_atoms[2 * p + 1], unit_vecs[nframes][p]);
                     }
 
                     ++nframes;
-
-                    printf("...done\n");
 
                 } while(read_next_x(*oenv, status, &t,
 #ifndef GRO_V5 
@@ -291,34 +282,70 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
             gk_log_fatal(FARGS, "No atoms found in %s!\n", fnames[efT_TRAJ]);
         }
 
-        // free excess memory
-        for(int p = 0; p < npairs_tot; ++p) {
-            srenew(unit_vecs[p], nframes);
-        }
+        srenew(unit_vecs, nframes); // free excess memory
 
         // DEBUG
         gk_print_log("dt is %f, nt is %f.\n", corr->dt, corr->nt);
         // print unit vecs
-        FILE *vecf = fopen("vecs.txt", "w");
-        for(int p = 0; p < npairs_tot; ++p) {
-            fprintf(vecf, "\nPair %d, atoms %d and %d:\n", p, corr->found_atoms[2 * p], corr->found_atoms[2 * p + 1]);
-            for(int fr = 0; fr < nframes; ++fr) {
-                fprintf(vecf, "Frame %d: %f, %f, %f\n", fr, unit_vecs[p][fr][XX], unit_vecs[p][fr][YY], unit_vecs[p][fr][ZZ]);
+        FILE *vecf = fopen("vecs_fbyp.txt", "w");
+        for(int fr = 0; fr < nframes; ++fr) {
+            fprintf(vecf, "\nFrame %d:\n", fr);
+            for(int p = 0; p < npairs_tot; ++p) {
+                fprintf(vecf, "Pair %d: %f, %f, %f\n", p, unit_vecs[fr][p][XX], unit_vecs[fr][p][YY], unit_vecs[fr][p][ZZ]);
             }
         }
         fclose(vecf);
-        gk_print_log("Unit vectors saved to vecs.txt for debugging.\n");
+        gk_print_log("Unit vectors saved to vecs_fbyp.txt for debugging.\n");
+
+
+        // Reformat 2d array unit_vecs from [frame#][vec] to [vec][frame#]
+        // for better cache locality during autocorrelation calculations, 
+        // since autocorrelation is calculated vector by vector.
+        // Why wasn't unit_vecs formatted this way in the first place?
+        // Because the reallocation pattern needed for growing the number of frames
+        // in unit_vecs when reading the trajectory was causing memory issues.
+        // This may be explored more in the future.
+
+        // Create new 2d array for reformatted unit vectors
+        rvec **old_unit_vecs = unit_vecs;
+        snew(unit_vecs, npairs_tot);
+
+        // Transpose unit_vecs matrix so that new[pair][frame] = old[frame][pair]
+        for(int p = 0; p < npairs_tot; ++p) {
+        	snew(unit_vecs[p], nframes);
+
+        	for(int f = 0; f < nframes; ++f) {
+        		copy_rvec(old_unit_vecs[f][p], unit_vecs[p][f]);
+        	}
+        }
+
+        // Done with old unit vectors matrix
+        for(int i = 0; i < nframes; ++i)
+            sfree(old_unit_vecs[i]);
+        sfree(old_unit_vecs);
+
+        // DEBUG
+        // print unit vecs
+        FILE *vecf2 = fopen("vecs_pbyf.txt", "w");
+        for(int p = 0; p < npairs_tot; ++p) {
+            fprintf(vecf2, "\nPair %d, atoms %d and %d:\n", p, corr->found_atoms[2 * p], corr->found_atoms[2 * p + 1]);
+            for(int fr = 0; fr < nframes; ++fr) {
+                fprintf(vecf2, "Frame %d: %f, %f, %f\n", fr, unit_vecs[p][fr][XX], unit_vecs[p][fr][YY], unit_vecs[p][fr][ZZ]);
+            }
+        }
+        fclose(vecf2);
+        gk_print_log("Unit vectors saved to vecs_pbyf.txt for debugging.\n");
+
 
         // TODO: calculate autocorrelation from unit vectors
-
 
 
         // Cleanup
 
         sfree(x);
 
-        for(int p = 0; p < npairs_tot; ++p)
-            sfree(unit_vecs[p]);
+        for(int i = 0; i < npairs_tot; ++i)
+            sfree(unit_vecs[i]);
         sfree(unit_vecs);
     } // if not memory limit
 }
