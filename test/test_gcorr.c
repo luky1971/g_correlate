@@ -3,8 +3,10 @@
 #include "correlate.h"
 #include "minunit.h"
 
+// Test counter
 int tests_run = 0;
 
+// Floating point equality tests
 #define VEC_EPS 0.001
 
 #define GC_FLT_EQ(X, Y, EPS)    (((X) > ((Y) - EPS)) && ((X) < ((Y) + EPS)))
@@ -12,7 +14,6 @@ int tests_run = 0;
 
 
 static char *test_unit_vecs() {
-#define NPAIRS 3
 	rvec x[5];
 
 	x[0][XX] = 1;
@@ -32,10 +33,12 @@ static char *test_unit_vecs() {
 	x[4][ZZ] = 0;
 
 	int pairs[] = { 0, 2, 4, 1, 3, 4 };
+#define NPAIRS 3
 
 	rvec unit_vecs[NPAIRS];
 
-	gc_get_unit_vecs(x, pairs, NPAIRS, unit_vecs);
+	for(int p = 0; p < NPAIRS; ++p)
+		gc_get_unit_vec(x, pairs[2*p], pairs[2*p+1], unit_vecs[p]);
 
 	rvec exp[NPAIRS];
 
@@ -70,10 +73,10 @@ static char *all_tests() {
 int main(int argc, char **argv) {
 	char *result = all_tests();
 	if(result) {
-		printf("ERROR, %s\n", result);
+		printf(MU_FAIL_COLOR "TEST FAILED" ANSI_COLOR_RESET ", %s\n", result);
 	}
 	else {
-		printf("ALL TESTS PASSED!\n");
+		printf(MU_PASS_COLOR "ALL TESTS PASSED!" ANSI_COLOR_RESET "\n");
 	}
 	printf("%d tests run.\n", tests_run);
 

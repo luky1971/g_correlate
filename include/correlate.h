@@ -12,12 +12,12 @@
 #ifndef CORRELATE_H
 #define CORRELATE_H
 
-// Command line parsing
 #ifdef GRO_V5
 #include "pargs.h"
 #else
 #include "statutil.h"
-#endif
+#endif // Command line parsing
+#include "vec.h" // vector ops for gc_get_unit_vec()
 
 // Indices of filenames
 enum {efT_TRAJ, efT_NDX, efT_TOP, efT_OUTDAT, efT_NUMFILES};
@@ -37,9 +37,9 @@ struct gcorr_dat_t {
                             // ex. given {"N", "H", "ND2", "H*", "C*", "H*"}, the program will search for N-H pairs, ND2-H* pairs, and C*-H* pairs,
                             // where H* will match any atom with a name starting with 'H', and likewise for C*.
     int nnamepairs; // INPUT: the number of pairs in atomnames.
-    real dt, nt; // INPUT: the time delay step and number of time delays in the domain of the autocorrelation functions.
-                 // Set to -1 to use the default behavior. The default for dt is to use the trajectory's time step,
-                 // and the default for nt is to go up to the length of the trajectory.
+    real dt; // INPUT: the time delay step (dt) and number of time delays (nt) in the domain of the autocorrelation functions.
+    int nt;  // Set either or both dt and nt to -1 to use the default behavior. The default for dt is to use the trajectory's time step,
+             // and the default for nt is to go up to the length of the trajectory.
 
     int *found_atoms; // Gromacs IDs of the atoms found in the trajectory corresponding to the atom name pairs in atomnames.
                       // Size 2 * sum(natompairs). Members of a pair are adjacent.
@@ -59,6 +59,10 @@ void gc_init_corr_dat(struct gcorr_dat_t *corr);
 /* Initializes a gcorr_dat_t struct, such as setting pointers to NULL and setting default parameters.
  */
 
+void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *corr, unsigned long flags);
+/* Calculates the autocorrelation functions for the trajectory in fnames[efT_TRAJ] using the topology in fnames[efT_TOP].
+ */
+
 void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds, // Input: Topology where atom-atom pairs will be searched.
                const char **atomnames, int nnamepairs, // Input: Pairs of atom names to be searched for in topology.
                int natompairs[], // Output: Number of atom pairs found for each atom name pair in atomnames.
@@ -71,19 +75,23 @@ void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds, // Input: Topology
                              // or 2 * natompairs[i] elements.
                              // The IDs in this array can be used to index into a gromacs trajectory associated with this topology.
 
-void gc_get_unit_vecs(const rvec x[], const int pairs[], int npairs, rvec unit_vecs[]);
-/* Calculates the unit vector formed between the points in each pair in the given array of points.
- * Pairs are specified by indexes into the array of points x.
- * The resulting unit vectors are stored in unit_vecs in the same order as pairs[].
- * unit_vecs should be pre-allocated to size npairs.
- */
-
-void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *corr, unsigned long flags);
-/* Calculates the autocorrelation functions for the trajectory in fnames[efT_TRAJ] using the topology in fnames[efT_TOP].
+void gc_calc_ac(rvec **unit_vecs, int nvecs, real dt, real nt, real **auto_corr);
+/* Calculates the autocorrelation functions 
  */
 
 void gc_free_corr(struct gcorr_dat_t *corr);
 /* Frees the dynamic memory in a gcorr_dat_t struct.
  */
+
+
+/* Calculates the unit vector formed between the points given by IDs a and b in the given array of points x.
+ * a and b are indexes into the array of points x.
+ * The resulting unit vector is stored in unit_vec.
+ */
+static inline void gc_get_unit_vec(const rvec x[], const int a, const int b, rvec unit_vec) {
+    rvec temp;
+    rvec_sub(x[b], x[a], temp);
+    unitv(temp, unit_vec);
+}
 
 #endif // CORRELATE_H

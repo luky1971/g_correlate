@@ -16,7 +16,6 @@
 
 #include "mtop_util.h" // dealing with topologies
 #include "smalloc.h" // memory stuff
-#include "vec.h" // vector ops for gc_get_unit_vecs()
 
 
 #define GC_PAIR_ALLOC 10 // Initial amount by which to dynamically allocate array memory for atom pairs.
@@ -101,15 +100,6 @@ void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds,
     }
     
     srenew(*pairs, pair_ind * 2); // Free any excess memory in pairs.
-}
-
-
-void gc_get_unit_vecs(const rvec x[], const int pairs[], int npairs, rvec unit_vecs[]) {
-    rvec temp;
-    for(int p = 0; p < npairs; ++p) {
-        rvec_sub(x[pairs[2 * p + 1]], x[pairs[2 * p]], temp);
-        unitv(temp, unit_vecs[p]);
-    }
 }
 
 
@@ -201,6 +191,7 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     }
     else {
         // Store needed data from whole trajectory then do calculations
+
         rvec *x;
         t_trxstatus *status = NULL;
         int natoms = 0;
@@ -209,9 +200,14 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
 
         int nframes = 0;
 
-        rvec **unit_vecs;
+        rvec **unit_vecs; // unit vectors will be stored by [pair][frame] for better cache locality when calculating autocorrelation
         int cur_alloc = GC_FRAME_ALLOC;
-        snew(unit_vecs, cur_alloc);
+
+        // allocate memory for unit vectors
+        snew(unit_vecs, npairs_tot);
+        for(int p = 0; p < npairs_tot; ++p) {
+            snew(unit_vecs[p], cur_alloc);
+        }
 
         natoms = read_first_x(*oenv, &status, fnames[efT_TRAJ], &t, &x, box);
 
@@ -226,6 +222,8 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
                 real last_dt = corr->dt;
 
                 do {
+                    printf("Frame %d", nframes);
+                    
                     cur_dt = t - last_t;
                     last_t = t;
 
@@ -242,18 +240,23 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
                         corr->dt = cur_dt;
                     }
 
-                    // Expand memory for unit vectors if needed
-                    if(nframes + 1 > cur_alloc) {
-                        cur_alloc *= 2;
-                        srenew(unit_vecs, cur_alloc);
+                    // Get unit vectors for the atom pairs in this frame
+                    for(int p = 0; p < npairs_tot; ++p) {
+                        // Expand memory for unit vectors if needed
+                        if(nframes + 1 > cur_alloc) {
+                            cur_alloc *= 2;
+                            srenew(unit_vecs[p], cur_alloc);
+                            if(unit_vecs[p] == NULL)
+                                gk_log_fatal(FARGS, "Failed to allocate memory for unit vectors at frame %d.\n", nframes);
+                        }
+
+                        gc_get_unit_vec(x, corr->found_atoms[2 * p], corr->found_atoms[2 * p + 1], unit_vecs[p][nframes]);
+                        // why this particular 2d array layout for unit_vecs? see unit_vecs declaration comment
                     }
 
-                    // Get unit vectors for the atom pairs in this frame
-                    snew(unit_vecs[nframes], npairs_tot);
-
-                    gc_get_unit_vecs(x, corr->found_atoms, npairs_tot, unit_vecs[nframes]);
-
                     ++nframes;
+
+                    printf("...done\n");
 
                 } while(read_next_x(*oenv, status, &t,
 #ifndef GRO_V5 
@@ -288,16 +291,19 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
             gk_log_fatal(FARGS, "No atoms found in %s!\n", fnames[efT_TRAJ]);
         }
 
-        srenew(unit_vecs, nframes); // free excess memory
+        // free excess memory
+        for(int p = 0; p < npairs_tot; ++p) {
+            srenew(unit_vecs[p], nframes);
+        }
 
         // DEBUG
         gk_print_log("dt is %f, nt is %f.\n", corr->dt, corr->nt);
         // print unit vecs
         FILE *vecf = fopen("vecs.txt", "w");
-        for(int fr = 0; fr < nframes; ++fr) {
-            fprintf(vecf, "\nFrame %d:\n", fr);
-            for(int p = 0; p < npairs_tot; ++p) {
-                fprintf(vecf, "Pair %d: %f, %f, %f\n", p, unit_vecs[fr][p][XX], unit_vecs[fr][p][YY], unit_vecs[fr][p][ZZ]);
+        for(int p = 0; p < npairs_tot; ++p) {
+            fprintf(vecf, "\nPair %d, atoms %d and %d:\n", p, corr->found_atoms[2 * p], corr->found_atoms[2 * p + 1]);
+            for(int fr = 0; fr < nframes; ++fr) {
+                fprintf(vecf, "Frame %d: %f, %f, %f\n", fr, unit_vecs[p][fr][XX], unit_vecs[p][fr][YY], unit_vecs[p][fr][ZZ]);
             }
         }
         fclose(vecf);
@@ -311,8 +317,8 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
 
         sfree(x);
 
-        for(int i = 0; i < nframes; ++i)
-            sfree(unit_vecs[i]);
+        for(int p = 0; p < npairs_tot; ++p)
+            sfree(unit_vecs[p]);
         sfree(unit_vecs);
     } // if not memory limit
 }
