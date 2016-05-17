@@ -1,6 +1,20 @@
 /*
  * Copyright 2016 Ahnaf Siddiqui and Sameer Varma
  *
+ * 
+ * Autocorrelation and S2 order parameter formulas are borrowed from
+ *
+ * Chatfield, D. C.; Szabo, A.; Brooks, B. R., 
+ * Molecular Dynamics of Staphylococcal Nuclease:  Comparison of Simulation with 15N and 13C NMR Relaxation Data. 
+ * Journal of the American Chemical Society 1998, 120 (21), 5301-5311.
+ *
+ * and
+ *
+ * Gu, Y.; Li, D.-W.; Brüschweiler, R., 
+ * NMR Order Parameter Determination from Long Molecular Dynamics Trajectories for Objective Comparison with Experiment. 
+ * Journal of Chemical Theory and Computation 2014, 10 (6), 2599-2607.
+ *
+ * 
  * This program uses the GROMACS molecular simulation package API.
  * Copyright (c) 1991-2000, University of Groningen, The Netherlands.
  * Copyright (c) 2001-2004, The GROMACS development team.
@@ -20,7 +34,7 @@
 #include "vec.h" // vector ops for gc_get_unit_vec()
 
 // Indices of filenames
-enum {efT_TRAJ, efT_NDX, efT_TOP, efT_OUTDAT, efT_NUMFILES};
+enum {efT_TRAJ, efT_NDX, efT_TOP, efT_OUTDAT, efT_S2DAT, efT_NUMFILES};
 
 // Flags
 enum { 
@@ -40,6 +54,7 @@ struct gcorr_dat_t {
     real dt; // INPUT: the time delay step (dt) and number of time delays (nt) in the domain of the autocorrelation functions.
     int nt;  // Set either or both dt and nt to -1 to use the default behavior. The default for dt is to use the trajectory's time step,
              // and the default for nt is to go up to the length of the trajectory.
+             // See auto_corr below for more info on dt and nt.
 
     int *found_atoms; // Gromacs IDs of the atoms found in the trajectory corresponding to the atom name pairs in atomnames.
                       // Size 2 * sum(natompairs). Members of a pair are adjacent.
@@ -51,6 +66,9 @@ struct gcorr_dat_t {
     // ie. for each atomnames pair i, there are natompairs[i] autocorrelation values in auto_corr[i],
     // followed by natompairs[i+1] autocorrelation values in auto_corr[i+1] for pair i + 1, and so on until i + x = sum(natompairs).
     real **auto_corr; // autocorrelation function values for each atom pair, size [sum(natompairs)][nt]
+                      // for each atom pair, the first autocorrelation value corresponds to t = dt, i.e. t = 0 is skipped,
+                      // and each subsequent t is the previous t plus dt,
+                      // so that the last autocorrelation value corresponds to t = dt * nt.
     real *s2; // S2 order parameter for each atom pair, size [sum(natompairs)]
 };
 
@@ -75,12 +93,17 @@ void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds, // Input: Topology
                              // or 2 * natompairs[i] elements.
                              // The IDs in this array can be used to index into a gromacs trajectory associated with this topology.
 
-void gc_calc_ac(rvec **unit_vecs, int nvecs, real dt, real nt, real **auto_corr);
-/* Calculates the autocorrelation functions 
+void gc_calc_ac(const rvec *vecs, int nvecs, real nt, real *auto_corr);
+/* Calculates the autocorrelation function for a trajectory of vectors
+ * and stores the results in auto_corr. auto_corr should be pre-allocated to size nt.
  */
+
+void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, const char *s2_fname);
 
 void gc_free_corr(struct gcorr_dat_t *corr);
 /* Frees the dynamic memory in a gcorr_dat_t struct.
+ * WARNING: this does not free any memory allocated for corr->atomnames.
+ * Whoever allocated that memory is responsible for it! 
  */
 
 
