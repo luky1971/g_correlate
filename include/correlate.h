@@ -61,10 +61,15 @@ struct gcorr_dat_t {
                     // Atom pairs are grouped in the same order as the names in atomnames.
     int *natompairs; // number of atom pairs found for each atom name pair in atomnames, in same order. Size nnamepairs.
 
-    // Each array in auto_corr[] and value in s2[] corresponds to an atom pair in the same order as atompairs
+    // Each unit vector in unit_vecs 
+    // and each array in auto_corr[] and value in s2[] corresponds to an atom pair in the same order as atompairs
     // and are grouped by atom name in the same order as they are specified in atomnames.
-    // ie. for each atomnames pair i, there are natompairs[i] autocorrelation values in auto_corr[i],
-    // followed by natompairs[i+1] autocorrelation values in auto_corr[i+1] for pair i + 1, and so on until i + x = sum(natompairs).
+    // ie. for each atomnames pair i, there are natompairs[i] unit vectors in unit_vecs, 
+    // and there are natompairs[i] autocorrelation functions in auto_corr,
+    // followed by natompairs[i+1] autocorrelation fucntions for pair i + 1, and so on until i + x = sum(natompairs).
+    rvec **unit_vecs; // the bond orientation unit vector for each pair in atompairs. Size [sum(natompairs)][nframes]
+    int nframes; // The number of time points at which unit vectors were recorded.
+                 // This is less than or equal to the number of frames in the trajectory (see gc_traj2uvecs function)
     real **auto_corr; // autocorrelation function values for each atom pair, size [sum(natompairs)][nt]
                       // for each atom pair, the first autocorrelation value corresponds to t = dt, i.e. t = 0 is skipped,
                       // and each subsequent t is the previous t plus dt,
@@ -93,11 +98,6 @@ void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds, // Input: Topology
                                 // or 2 * natompairs[i] elements.
                                 // The IDs in this array can be used to index into a gromacs trajectory associated with this topology.
 
-void gc_calc_ac(const rvec *vecs, int nvecs, real nt, real *auto_corr);
-/* Calculates the autocorrelation function for a trajectory of vectors
- * and stores the results in auto_corr. auto_corr should be pre-allocated to size nt.
- */
-
 int gc_traj2uvecs(const char *traj_fname, 
                   output_env_t *oenv, 
                   real *dt, 
@@ -110,6 +110,16 @@ int gc_traj2uvecs(const char *traj_fname,
  * as the frames between every dt timestep are skipped.
  * dt should NOT be NULL. The pointed value should be -1 to use the trajectory's timestep, which will be saved to dt.
  * Otherwise, the given dt value should be a multiple of the trajectory's timestep.
+ */
+
+void gc_calc_ac(const rvec vecs[], int nvecs, int nt, real auto_corr[]);
+/* Calculates the autocorrelation function for a trajectory of vectors
+ * and stores the results in auto_corr. auto_corr should be pre-allocated to size nt.
+ */
+
+real gc_calc_s2(const rvec unit_vecs[], int nvecs);
+/* Calculates the generalized Lipari-Szabo order parameter S^2 for the given trajectory of unit bond vectors.
+ * Returns S^2.
  */
 
 void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, const char *s2_fname);

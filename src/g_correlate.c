@@ -139,12 +139,12 @@ int main(int argc, char *argv[]) {
     // Run autocorrelation and S2 calculation
     gc_correlate(fnames, &oenv, &corr, flags);
 
-    // TODO: calculate S2, print results, and whatnot!
+    // Print results
     gc_save_corr(&corr, fnames[efT_OUTDAT], fnames[efT_S2DAT]);
     gk_print_log("Bye!\n");
 
     // Cleanup
-    // gc_free_corr(&corr);
+    gc_free_corr(&corr);
     sfree(corr.atomnames);
 
 #ifdef GTA_BENCH
