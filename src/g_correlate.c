@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
 
     // TODO: calculate S2, print results, and whatnot!
     gc_save_corr(&corr, fnames[efT_OUTDAT], fnames[efT_S2DAT]);
-    gk_print_log("Results saved in %s and %s. Bye!\n", fnames[efT_OUTDAT], fnames[efT_S2DAT]);
+    gk_print_log("Bye!\n");
 
     // Cleanup
     // gc_free_corr(&corr);

@@ -24,6 +24,8 @@
  */
 
 #include "correlate.h"
+
+#include <stdio.h>
 #include "gkut_io.h"
 #include "gkut_log.h"
 #include "ckut_string.h" // pattern matching atom names
@@ -417,6 +419,14 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     	gc_calc_ac(unit_vecs[p], nframes, corr->nt, corr->auto_corr[p]);
     }
 
+    // DEBUG
+    // for(int p = 0; p < npairs_tot; ++p) {
+    // 	printf("Pair %d:\n", p);
+    // 	for(int t = 0; t < corr->nt; ++t) {
+    // 		printf("%f\t%f\n", corr->dt * (t+1), corr->auto_corr[p][t]);
+    // 	}
+    // }
+
     // TODO: calculate s2
 
     // Done with unit vectors
@@ -428,17 +438,20 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
 
 void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, const char *s2_fname) {
 	if(corr_fname) {
-		FILE *f = fopen(corr_fname, "w");
+		FILE *f;
+		char fname[256];
 		int p = 0;
 
 		for(int np = 0; np < corr->nnamepairs; ++np) {
-			fprintf(f, "# PAIR %s-%s:\n", 
-				corr->atomnames[2*np], corr->atomnames[2*np+1]);
+			sprintf(fname, "%s-%s_%s", 
+				corr->atomnames[2*np], corr->atomnames[2*np+1], corr_fname);
+
+			f = fopen(fname, "w");
 			int i;
 
 			for(i = 0; i < corr->natompairs[np]; ++i) {
-				fprintf(f, "# Atom %d and %d:\n", 
-					corr->atompairs[2*(p+i)], corr->atompairs[2*(p+i)+1]);
+				fprintf(f, "# PAIR %d, Atoms %d and %d:\n", 
+					i, corr->atompairs[2*(p+i)], corr->atompairs[2*(p+i)+1]);
 				fprintf(f, "# t\tautocorrelation\n");
 				fprintf(f, "%f\t%f\n", 
 					0.0, 1.0);
@@ -449,9 +462,12 @@ void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, const char *
 				}
 			}
 
+			
+			fclose(f);
+			gk_print_log("Autocorrelation data for %s-%s pairs saved to %s.\n", 
+				corr->atomnames[2*np], corr->atomnames[2*np+1], fname);
 			p += i;
 		}
-		fprintf(f, "\n");
 	}
 
 	if(s2_fname) {
