@@ -57,7 +57,7 @@ test: test_gcorr.o correlate.o gkut
 	$(GKUT)/build/gkut_io.o $(GKUT)/build/gkut_log.o $(LINKGRO) $(LIBGRO) $(LIBS)
 
 install: g_correlate
-	install $(BUILD)/g_correlate $(INSTALL)
+	install $(BUILD)/g_correlate $(INSTALL) && install gc_getpair $(INSTALL)
 
 g_correlate.o: $(SRC)/g_correlate.c $(INCLUDE)/correlate.h $(INCLUDE)/correlate.h
 	$(CC) $(CFLAGS) -o $(BUILD)/g_correlate.o -c $(SRC)/g_correlate.c \

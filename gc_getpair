@@ -19,7 +19,8 @@ fi
 
 # Get filename without extra fluff
 FNAME=$(echo "$FILE" | rev | cut -d'/' -f 1 | cut -d'.' -f 2 | rev)
+EXT=$(echo "$FILE" | rev | cut -d'.' -f 1 | rev)
 
-awk -F '[, ]' -v file="$FNAME" -v first="$FIRST" -v last="$LAST" '/PAIR/{pair=$3}{if (pair >= first && pair <= last) print > (file "_p" pair ".dat")}' "$FILE"
+awk -F '[, ]' -v file="$FNAME" -v ext="$EXT" -v first="$FIRST" -v last="$LAST" '/PAIR/{pair=$3}{if (pair >= first && pair <= last) print > (file "_p" pair "." ext)}' "$FILE"
 
 echo "Separated files saved as "$FNAME"_p#.dat"
