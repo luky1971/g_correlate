@@ -91,11 +91,15 @@ int main(int argc, char *argv[]) {
     };
 
     t_pargs pa[] = {
-        {"-a", FALSE, etSTR, {&pairnames}, "Comma-delimited list of atom name pairs to use for calculating S2, supports wildcards (ex. 'N-H,ND2-H*,C*-H*')"},
-        {"-dt", FALSE, etREAL, {&(corr.dt)}, "The time delay step for the domain of the autocorrelation functions. The default is to use the trajectory's timestep."},
-        {"-nt", FALSE, etINT, {&(corr.nt)}, "The number of time delays in the domain of the autocorrelation functions. The default is to go up to the length of the trajectory."},
+        {"-a", FALSE, etSTR, {&pairnames}, 
+            "Comma-delimited list of atom name pairs to use for calculating S2, supports wildcards (ex. 'N-H,ND2-H*,C*-H*')"},
+        {"-dt", FALSE, etREAL, {&(corr.dt)}, 
+            "The time delay step for the domain of the autocorrelation functions. The default is to use the trajectory's timestep."},
+        {"-nt", FALSE, etINT, {&(corr.nt)}, 
+            "The number of time delays in the domain of the autocorrelation functions. The default is for nt*dt to go up to the length of the trajectory."},
         // {"-fft", FALSE, etINT, {&fft}, "Use FFT for calculating S2."},
-        // {"-limit", FALSE, etBOOL, {&mem_limit}, "Limit number of trajectory frames loaded into memory. If false, whole trajectory is loaded at once."}
+        // {"-limit", FALSE, etBOOL, {&mem_limit}, 
+                // "Limit number of trajectory frames loaded into memory. If false, whole trajectory is loaded at once."}
     };
 
     parse_common_args(&argc, argv, 0, efT_NUMFILES, fnm, asize(pa), pa, asize(desc), desc, 0, NULL, &oenv);
