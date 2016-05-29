@@ -70,11 +70,12 @@ struct gcorr_dat_t {
     rvec **unit_vecs; // the bond orientation unit vector for each pair in atompairs. Size [sum(natompairs)][nframes]
     int nframes; // The number of time points at which unit vectors were recorded.
                  // This is less than or equal to the number of frames in the trajectory (see gc_traj2uvecs function)
-    real **auto_corr; // Autocorrelation function values (not normalized) for each atom pair, size [sum(natompairs)][nt+1]
-                      // for each atom pair, the first autocorrelation value corresponds to t = 0,
+    real **auto_corr; // autocorrelation function values for each atom pair, size [sum(natompairs)][nt]
+                      // for each atom pair, the first autocorrelation value corresponds to t = dt, i.e. t = 0 is skipped,
                       // and each subsequent t is the previous t plus dt,
                       // so that the last autocorrelation value corresponds to t = dt * nt.
-                      // You can normalize the autocorrelation values for an atom pair by dividing all of them by the value at t = 0.
+                      // The skipped autocorrelation value at t = 0 is implied to be 1,
+                      // this is always the case because unit vectors are used.
     real *s2; // S2 order parameter for each atom pair, size [sum(natompairs)]
 };
 
@@ -114,8 +115,8 @@ int gc_traj2uvecs(const char *traj_fname,
  */
 
 void gc_calc_ac(const rvec vecs[], int nvecs, int nt, real auto_corr[]);
-/* Calculates the un-normalized autocorrelation function for a trajectory of vectors
- * and stores the results in auto_corr. auto_corr should be pre-allocated to size nt + 1 (to include t = 0).
+/* Calculates the autocorrelation function for a trajectory of vectors
+ * and stores the results in auto_corr. auto_corr should be pre-allocated to size nt.
  */
 
 real gc_calc_s2(const rvec unit_vecs[], int nvecs);

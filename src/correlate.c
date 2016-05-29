@@ -255,22 +255,14 @@ int gc_traj2uvecs(const char *traj_fname,
 // NMR Order Parameter Determination from Long Molecular Dynamics Trajectories for Objective Comparison with Experiment. 
 // Journal of Chemical Theory and Computation 2014, 10 (6), 2599-2607.
 void gc_calc_ac(const rvec vecs[], int nvecs, int nt, real auto_corr[]) {
-    // Calculate the autocorrelation value at time delay = 0
-    real sum = 0, dot;
-    for(int i = 0; i < nvecs; ++i) {
-        dot = iprod(vecs[i], vecs[i]); // dot with self
-        sum += 3.0 * dot * dot - 1.0;
-    }
-    auto_corr[0] = 0.5 * (sum / nvecs);
-
 	// tdelay is the number of indexes of separation between consecutive vectors in the current time delay
 	for(int tdelay = 1; tdelay <= nt; ++tdelay) { // iterate through time delays of autocorrelation domain
-		sum = 0;
+		real sum = 0, dot;
 		for(int i = 0; i < nvecs - tdelay; i += tdelay) { // iterate through the vectors for each time delay
 			dot = iprod(vecs[i], vecs[i + tdelay]);
 			sum += 3.0 * dot * dot - 1.0;
 		}
-		auto_corr[tdelay] = 0.5 * (sum / ((nvecs - 1) / tdelay));
+		auto_corr[tdelay - 1] = 0.5 * (sum / ((nvecs - 1) / tdelay));
 	}
 }
 
@@ -460,7 +452,7 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     // calculate autocorrelation function for each trajectory of unit vectors
     snew(corr->auto_corr, npairs_tot);
     for(int p = 0; p < npairs_tot; ++p) {
-    	snew(corr->auto_corr[p], corr->nt + 1); // +1 to include t = 0
+    	snew(corr->auto_corr[p], corr->nt);
     	gc_calc_ac(corr->unit_vecs[p], corr->nframes, corr->nt, corr->auto_corr[p]);
     }
 
@@ -497,10 +489,12 @@ void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, const char *
 				fprintf(f, "# PAIR %d, Atoms %d and %d:\n", 
 					i, corr->atompairs[2*(p+i)], corr->atompairs[2*(p+i)+1]);
 				fprintf(f, "# t\tautocorrelation\n");
+				fprintf(f, "%f\t%f\n", 
+					0.0, 1.0);
 
-				for(int t = 0; t <= corr->nt; ++t) {
+				for(int t = 1; t <= corr->nt; ++t) {
 					fprintf(f, "%f\t%f\n", 
-						t * corr->dt, corr->auto_corr[p+i][t]);
+						t * corr->dt, corr->auto_corr[p+i][t-1]);
 				}
 			}
 
