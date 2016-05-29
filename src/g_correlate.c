@@ -23,7 +23,6 @@
  * and including many others, as listed at http://www.gromacs.org.
  */
 
-#include <ctype.h> // for isspace
 #include <string.h> // for strlen
 #ifdef GTA_BENCH
 #include <time.h>
@@ -32,26 +31,6 @@
 #include "smalloc.h" // memory allocation
 #include "gkut_log.h"
 #include "correlate.h"
-
-// NOTE: this modifies the inwords array and simply sets pointers to different portions of it in outwords,
-// to avoid allocating and copying memory.
-static void inparse(char *inwords, const char **outwords, int *nwords) {
-    char *c = inwords;
-    const char **w = outwords;
-    int newword = 1;
-    while(c != NULL && *c != '\0') {
-        if(isspace(*c) || *c == '-' || *c == ',') {
-            *c = '\0';
-            newword = 1;
-        }
-        else if(newword) {
-            *(w++) = c;
-            newword = 0;
-        }
-        ++c;
-    }
-    *nwords = w - outwords;
-}
 
 
 int main(int argc, char *argv[]) {

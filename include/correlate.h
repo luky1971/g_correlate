@@ -26,6 +26,7 @@
 #ifndef CORRELATE_H
 #define CORRELATE_H
 
+#include <ctype.h> // for isspace
 #ifdef GRO_V5
 #include "pargs.h"
 #else
@@ -144,6 +145,29 @@ static inline void gc_get_unit_vec(const rvec x[], const int a, const int b, rve
     rvec temp;
     rvec_sub(x[b], x[a], temp);
     unitv(temp, unit_vec);
+}
+
+
+/* Parses the inwords string inline and stores pointers to parsed substrings in outwords, which must be pre-allocated.
+ */
+// NOTE: this modifies the inwords array and simply sets pointers to different portions of it in outwords,
+// to avoid allocating and copying memory.
+static void inparse(char *inwords, const char **outwords, int *nwords) {
+    char *c = inwords;
+    const char **w = outwords;
+    int newword = 1;
+    while(c != NULL && *c != '\0') {
+        if(isspace(*c) || *c == '-' || *c == ',') {
+            *c = '\0';
+            newword = 1;
+        }
+        else if(newword) {
+            *(w++) = c;
+            newword = 0;
+        }
+        ++c;
+    }
+    *nwords = w - outwords;
 }
 
 #endif // CORRELATE_H
