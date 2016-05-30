@@ -29,6 +29,7 @@
 #endif
 #include "macros.h" // for asize(), used with parse_common_args()
 #include "smalloc.h" // memory allocation
+#include "gkut_io.h" // for topology i/o
 #include "gkut_log.h"
 #include "correlate.h"
 
@@ -119,14 +120,27 @@ int main(int argc, char *argv[]) {
     //     printf("%s and %s\n", corr.atomnames[2*i], corr.atomnames[2*i+1]);
     // }
 
+
     // Run autocorrelation and S2 calculation
     gc_correlate(fnames, &oenv, &corr, flags);
 
+
     // Print results
-    gc_save_corr(&corr, fnames[efT_OUTDAT], fnames[efT_S2DAT]);
+    t_topology top;
+    t_atoms *pAtoms = NULL;
+
+    if(gk_read_topology(fnames[efT_TOP], &top))
+        pAtoms = &(top.atoms);
+
+    gc_save_corr(&corr, fnames[efT_OUTDAT], pAtoms);
+    gc_save_s2(&corr, fnames[efT_S2DAT], pAtoms);
+
     gk_print_log("Bye!\n");
 
+
     // Cleanup
+    if(pAtoms)
+        gk_free_topology(&top);
     gc_free_corr(&corr);
     sfree(corr.atomnames);
 

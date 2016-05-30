@@ -30,7 +30,6 @@
 #include "gkut_log.h"
 #include "ckut_string.h" // pattern matching atom names
 
-#include "mtop_util.h" // dealing with topologies
 #include "smalloc.h" // memory stuff
 
 
@@ -299,20 +298,9 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     // Get topology data
     t_topology top;
 
-    switch(fn2ftp(fnames[efT_TOP])) {
-        case efGRO:
-                gk_read_top_gro(fnames[efT_TOP], &top);
-            break;
-        case efTPR:
-            {
-                gmx_mtop_t mtop;
-                gk_read_top_tpr(fnames[efT_TOP], &mtop);
-                top = gmx_mtop_t_to_t_topology(&mtop);
-            }
-            break;
-        default:
-            gk_log_fatal(FARGS, "%s is not a supported filetype for topology information!\n", fnames[efT_TOP]);
-    }
+    if(!gk_read_topology(fnames[efT_TOP], &top))
+        gk_log_fatal(FARGS, "%s is not a supported filetype for topology information!\n", fnames[efT_TOP]);
+
 
     // DEBUG
     // Print atom names and atom numbers
@@ -472,7 +460,7 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
 }
 
 
-void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, const char *s2_fname) {
+void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, t_atoms *atoms) {
 	if(corr_fname) {
 		FILE *f;
 		char fname[256];
@@ -486,12 +474,29 @@ void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, const char *
 			int i;
 
 			for(i = 0; i < corr->natompairs[np]; ++i) {
-				fprintf(f, "# PAIR %d, Atoms %d and %d:\n", 
-					i, corr->atompairs[2*(p+i)], corr->atompairs[2*(p+i)+1]);
+                int atomnum1 = corr->atompairs[2*(p+i)], atomnum2 = corr->atompairs[2*(p+i)+1];
+
+                // Print header for this pair
+				fprintf(f, "# PAIR %d\n", i);
+                fprintf(f, "# ATOMS %d and %d\n", atomnum1, atomnum2);
+
+                if(atoms) {
+                    fprintf(f, "# ATOM NAMES %s and %s\n", 
+                        *(atoms->atomname[atomnum1]), 
+                        *(atoms->atomname[atomnum2]));
+
+                    fprintf(f, "# RESIDUES %d%s and %d%s\n",
+                        atoms->resinfo[atomnum1].nr, *(atoms->resinfo[atomnum1].name), 
+                        atoms->resinfo[atomnum2].nr, *(atoms->resinfo[atomnum2].name));
+                }
+
+
+                // Print column labels
 				fprintf(f, "# t\tautocorrelation\n");
 				fprintf(f, "%f\t%f\n", 
 					0.0, 1.0);
 
+                // Print autocorrelations for this pair
 				for(int t = 1; t <= corr->nt; ++t) {
 					fprintf(f, "%f\t%f\n", 
 						t * corr->dt, corr->auto_corr[p+i][t-1]);
@@ -505,27 +510,30 @@ void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, const char *
 			p += i;
 		}
 	}
+}
 
-	if(s2_fname) {
-		FILE *f = fopen(s2_fname, "w");
-		int p = 0;
 
-		fprintf(f, "# Atom#\tAtom#\tS^2\n");
+void gc_save_s2(struct gcorr_dat_t *corr, const char *s2_fname, t_atoms *atoms) {
+    if(s2_fname) {
+        FILE *f = fopen(s2_fname, "w");
+        int p = 0;
 
-		for(int np = 0; np < corr->nnamepairs; ++np) {
-			int i;
+        fprintf(f, "# Atom#\tAtom#\tS^2\n");
 
-			for(i = 0; i < corr->natompairs[np]; ++i) {
-				fprintf(f, "%d\t%d\t%f\n", 
-					corr->atompairs[2*(p+i)], corr->atompairs[2*(p+i)+1], corr->s2[p+i]);
-			}
+        for(int np = 0; np < corr->nnamepairs; ++np) {
+            int i;
 
-			p += i;
-		}
+            for(i = 0; i < corr->natompairs[np]; ++i) {
+                fprintf(f, "%d\t%d\t%f\n", 
+                    corr->atompairs[2*(p+i)], corr->atompairs[2*(p+i)+1], corr->s2[p+i]);
+            }
 
-		fclose(f);
-		gk_print_log("S^2 values saved to %s\n", s2_fname);
-	}
+            p += i;
+        }
+
+        fclose(f);
+        gk_print_log("S^2 values saved to %s\n", s2_fname);
+    }
 }
 
 

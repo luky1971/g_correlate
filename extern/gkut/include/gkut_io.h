@@ -58,8 +58,13 @@ void gk_ndx_filter_traj(const char *ndx_fname, rvec **pre_x, rvec ***new_x, int 
  * 2D memory is allocated for new_x.
  */
 
+int gk_read_topology(const char *top_fname, t_topology *top);
+/* Reads topology information from a gro or tpr file into a t_topology struct.
+ * Other formats are not currently supporeted.
+ */
+
 void gk_read_top_gro(const char *gro_fname, t_topology *top);
-/* Reads topology information from a gro file.
+/* Reads topology information from a gro file into a t_topology struct.
  * Allocates memory for data within t_topology *top.
  * Use free_topology to free.
  */
@@ -69,7 +74,7 @@ void gk_free_topology(t_topology *top);
  */
 
 void gk_read_top_tpr(const char *tpr_fname, gmx_mtop_t *mtop);
-/* Reads topology information from a tpr file
+/* Reads topology information from a tpr file into a gmx_mtop_t struct.
  * Allocates memory for data within gmx_mtop_t *mtop.
  * Use free_mtop to free memory.
  */

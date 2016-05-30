@@ -17,6 +17,7 @@
 #include "topology.h"
 #include "trxio.h"
 #endif
+#include "mtop_util.h" // dealing with topologies
 #include "smalloc.h"
 #include "tpxio.h"
 #include "typedefs.h"
@@ -115,6 +116,23 @@ void gk_ndx_filter_traj(const char *ndx_fname, rvec **pre_x, rvec ***new_x, int 
 	sfree(indx);
 }
 
+int gk_read_topology(const char *top_fname, t_topology *top) {
+	switch(fn2ftp(top_fname)) {
+		case efGRO:
+			gk_read_top_gro(top_fname, top);
+			break;
+		case efTPR:
+			{
+				gmx_mtop_t mtop;
+				gk_read_top_tpr(top_fname, &mtop);
+				*top = gmx_mtop_t_to_t_topology(&mtop);
+			}
+			break;
+		default:
+			return 0;
+	}
+	return 1;
+}
 
 void gk_read_top_gro(const char *gro_fname, t_topology *top) {
 	char title[256];

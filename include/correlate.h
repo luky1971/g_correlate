@@ -125,9 +125,16 @@ real gc_calc_s2(const rvec unit_vecs[], int nvecs);
  * Returns S^2.
  */
 
-void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, const char *s2_fname);
-/* Outputs the given autocorrelation and s2 data to files with the given names.
- * Either corr_fname or s2_fname can be NULL to not output the corresponding data.
+void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, t_atoms *atoms);
+/* Outputs the given autocorrelation data to a file.
+ * If a t_atoms struct is given, atom pair names and residues will also be printed.
+ * Otherwise, set atoms to NULL.
+ */
+
+void gc_save_s2(struct gcorr_dat_t *corr, const char *s2_fname, t_atoms *atoms);
+/* Outputs the given S2 data to a file.
+ * If a t_atoms struct is given, atom pair names and residues will also be printed.
+ * Otherwise, set atoms to NULL.
  */
 
 void gc_free_corr(struct gcorr_dat_t *corr);
