@@ -486,8 +486,8 @@ void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, t_atoms *ato
                         *(atoms->atomname[atomnum2]));
 
                     fprintf(f, "# RESIDUES %d%s and %d%s\n",
-                        atoms->resinfo[atomnum1].nr, *(atoms->resinfo[atomnum1].name), 
-                        atoms->resinfo[atomnum2].nr, *(atoms->resinfo[atomnum2].name));
+                        atoms->resinfo[atoms->atom[atomnum1].resind].nr, *(atoms->resinfo[atoms->atom[atomnum1].resind].name), 
+                        atoms->resinfo[atoms->atom[atomnum2].resind].nr, *(atoms->resinfo[atoms->atom[atomnum2].resind].name));
                 }
 
 
