@@ -56,9 +56,9 @@ void gc_init_corr_dat(struct gcorr_dat_t *corr) {
 
 
 void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds,
-               const char **atomnames, int nnamepairs,
-               int natompairs[],
-               int **pairs) {
+                  const char **atomnames, int nnamepairs,
+                  int natompairs[],
+                  int **pairs) {
     // Initialize number of pairs for each pair of atom names to zero.
     for(int i = 0; i < nnamepairs; ++i) {
         natompairs[i] = 0;
@@ -121,11 +121,11 @@ void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds,
 
 
 int gc_traj2uvecs(const char *traj_fname, 
-				  output_env_t *oenv, 
-				  real *dt, 
-				  int atompairs[], int npairs, 
-				  rvec ***unit_vecs) {
-	rvec *x;
+                  output_env_t *oenv, 
+                  real *dt, 
+                  int atompairs[], int npairs, 
+                  rvec ***unit_vecs) {
+    rvec *x;
     t_trxstatus *status = NULL;
     int natoms = 0;
     real t = 0.0;
@@ -169,8 +169,8 @@ int gc_traj2uvecs(const char *traj_fname,
 
                 // Expand memory if needed
                 if(nframes + 1 > cur_alloc) {
-                	cur_alloc *= 2;
-                	srenew(*unit_vecs, cur_alloc);
+                    cur_alloc *= 2;
+                    srenew(*unit_vecs, cur_alloc);
                 }
 
                 // Get unit vectors for the atom pairs in this frame
@@ -198,34 +198,34 @@ int gc_traj2uvecs(const char *traj_fname,
 
                 // if this trajectory frame is not on a dt boundary, skip it
                 if(GC_TIME_EQ(cur_dt, *dt)) {
-                	// Expand memory if needed
-	                if(nframes + 1 > cur_alloc) {
-	                	cur_alloc *= 2;
-	                	srenew(*unit_vecs, cur_alloc);
-	                }
+                    // Expand memory if needed
+                    if(nframes + 1 > cur_alloc) {
+                        cur_alloc *= 2;
+                        srenew(*unit_vecs, cur_alloc);
+                    }
 
-                	// Get unit vectors for the atom pairs in this frame
-                	snew((*unit_vecs)[nframes], npairs);
-	                for(int p = 0; p < npairs; ++p) {
-	                    gc_get_unit_vec(x, atompairs[2 * p], atompairs[2 * p + 1], (*unit_vecs)[nframes][p]);
-	                }
+                    // Get unit vectors for the atom pairs in this frame
+                    snew((*unit_vecs)[nframes], npairs);
+                    for(int p = 0; p < npairs; ++p) {
+                        gc_get_unit_vec(x, atompairs[2 * p], atompairs[2 * p + 1], (*unit_vecs)[nframes][p]);
+                    }
 
-                	// Reset timestep counter
-                	last_t = t;
+                    // Reset timestep counter
+                    last_t = t;
 
-                	++nframes;
+                    ++nframes;
                 }
                 else if(cur_dt > *dt) {
-                	gk_log_fatal(FARGS, "Error at frame %d of %s: "
-                		"given dt = %f is not a multiple of the trajectory timestep, "
-                		"or the trajectory has inconsistent timesteps.\n", 
+                    gk_log_fatal(FARGS, "Error at frame %d of %s: "
+                        "given dt = %f is not a multiple of the trajectory timestep, "
+                        "or the trajectory has inconsistent timesteps.\n", 
                         trajframe, traj_fname, *dt);
                 }
 
                 ++trajframe;
             } while(read_next_x(*oenv, status, &t,
 #ifndef GRO_V5 
-            	natoms,
+                natoms,
 #endif
                 x, box));
         } // if provided dt >= 0
@@ -254,15 +254,15 @@ int gc_traj2uvecs(const char *traj_fname,
 // NMR Order Parameter Determination from Long Molecular Dynamics Trajectories for Objective Comparison with Experiment. 
 // Journal of Chemical Theory and Computation 2014, 10 (6), 2599-2607.
 void gc_calc_ac(const rvec vecs[], int nvecs, int nt, real auto_corr[]) {
-	// tdelay is the number of indexes of separation between consecutive vectors in the current time delay
-	for(int tdelay = 1; tdelay <= nt; ++tdelay) { // iterate through time delays of autocorrelation domain
-		real sum = 0, dot;
-		for(int i = 0; i < nvecs - tdelay; i += tdelay) { // iterate through the vectors for each time delay
-			dot = iprod(vecs[i], vecs[i + tdelay]);
-			sum += 3.0 * dot * dot - 1.0;
-		}
-		auto_corr[tdelay - 1] = 0.5 * (sum / ((nvecs - 1) / tdelay));
-	}
+    // tdelay is the number of indexes of separation between consecutive vectors in the current time delay
+    for(int tdelay = 1; tdelay <= nt; ++tdelay) { // iterate through time delays of autocorrelation domain
+        real sum = 0, dot;
+        for(int i = 0; i < nvecs - tdelay; i += tdelay) { // iterate through the vectors for each time delay
+            dot = iprod(vecs[i], vecs[i + tdelay]);
+            sum += 3.0 * dot * dot - 1.0;
+        }
+        auto_corr[tdelay - 1] = 0.5 * (sum / ((nvecs - 1) / tdelay));
+    }
 }
 
 
@@ -272,25 +272,25 @@ void gc_calc_ac(const rvec vecs[], int nvecs, int nt, real auto_corr[]) {
 // Molecular Dynamics of Staphylococcal Nuclease:  Comparison of Simulation with 15N and 13C NMR Relaxation Data. 
 // Journal of the American Chemical Society 1998, 120 (21), 5301-5311.
 real gc_calc_s2(const rvec unit_vecs[], int nvecs) {
-	real mx2 = 0, my2 = 0, mz2 = 0, mxy = 0, mxz = 0, myz = 0;
+    real mx2 = 0, my2 = 0, mz2 = 0, mxy = 0, mxz = 0, myz = 0;
 
-	for(int i = 0; i < nvecs; ++i) {
-		mx2 += unit_vecs[i][XX] * unit_vecs[i][XX];
-		my2 += unit_vecs[i][YY] * unit_vecs[i][YY];
-		mz2 += unit_vecs[i][ZZ] * unit_vecs[i][ZZ];
-		mxy += unit_vecs[i][XX] * unit_vecs[i][YY];
-		mxz += unit_vecs[i][XX] * unit_vecs[i][ZZ];
-		myz += unit_vecs[i][YY] * unit_vecs[i][ZZ];
-	}
+    for(int i = 0; i < nvecs; ++i) {
+        mx2 += unit_vecs[i][XX] * unit_vecs[i][XX];
+        my2 += unit_vecs[i][YY] * unit_vecs[i][YY];
+        mz2 += unit_vecs[i][ZZ] * unit_vecs[i][ZZ];
+        mxy += unit_vecs[i][XX] * unit_vecs[i][YY];
+        mxz += unit_vecs[i][XX] * unit_vecs[i][ZZ];
+        myz += unit_vecs[i][YY] * unit_vecs[i][ZZ];
+    }
 
-	mx2 /= nvecs;
-	my2 /= nvecs;
-	mz2 /= nvecs;
-	mxy /= nvecs;
-	mxz /= nvecs;
-	myz /= nvecs;
+    mx2 /= nvecs;
+    my2 /= nvecs;
+    mz2 /= nvecs;
+    mxy /= nvecs;
+    mxz /= nvecs;
+    myz /= nvecs;
 
-	return 1.5*(mx2*mx2 + my2*my2 + mz2*mz2 + 2*(mxy*mxy + mxz*mxz + myz*myz)) - 0.5;
+    return 1.5*(mx2*mx2 + my2*my2 + mz2*mz2 + 2*(mxy*mxy + mxz*mxz + myz*myz)) - 0.5;
 }
 
 
@@ -378,9 +378,9 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     }
 
     if(corr->nt >= corr->nframes) {
-    	gk_log_fatal(FARGS, 
-    		"Given nt, %d, will cause largest time delay nt * dt = %f, to be longer than trajectory %s!\n", 
-    		corr->nt, corr->nt * corr->dt, fnames[efT_TRAJ]);
+        gk_log_fatal(FARGS, 
+            "Given nt, %d, will cause largest time delay nt * dt = %f, to be longer than trajectory %s!\n", 
+            corr->nt, corr->nt * corr->dt, fnames[efT_TRAJ]);
     }
 
     // DEBUG
@@ -410,11 +410,11 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
 
     // Transpose unit_vecs matrix so that new[pair][frame] = old[frame][pair]
     for(int p = 0; p < npairs_tot; ++p) {
-    	snew(corr->unit_vecs[p], corr->nframes);
+        snew(corr->unit_vecs[p], corr->nframes);
 
-    	for(int f = 0; f < corr->nframes; ++f) {
-    		copy_rvec(unit_vecs[f][p], corr->unit_vecs[p][f]);
-    	}
+        for(int f = 0; f < corr->nframes; ++f) {
+            copy_rvec(unit_vecs[f][p], corr->unit_vecs[p][f]);
+        }
     }
 
     // Done with old unit vectors matrix
@@ -427,10 +427,10 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     FILE *vecf2 = fopen("vecs_pbyf.txt", "w");
     for(int p = 0; p < npairs_tot; ++p) {
         fprintf(vecf2, "\nPair %d, atoms %d and %d:\n", 
-        	p, corr->atompairs[2 * p], corr->atompairs[2 * p + 1]);
+            p, corr->atompairs[2 * p], corr->atompairs[2 * p + 1]);
         for(int fr = 0; fr < corr->nframes; ++fr) {
             fprintf(vecf2, "Frame %d: %f, %f, %f\n", 
-            	fr, corr->unit_vecs[p][fr][XX], corr->unit_vecs[p][fr][YY], corr->unit_vecs[p][fr][ZZ]);
+                fr, corr->unit_vecs[p][fr][XX], corr->unit_vecs[p][fr][YY], corr->unit_vecs[p][fr][ZZ]);
         }
     }
     fclose(vecf2);
@@ -440,44 +440,44 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     // calculate autocorrelation function for each trajectory of unit vectors
     snew(corr->auto_corr, npairs_tot);
     for(int p = 0; p < npairs_tot; ++p) {
-    	snew(corr->auto_corr[p], corr->nt);
-    	gc_calc_ac(corr->unit_vecs[p], corr->nframes, corr->nt, corr->auto_corr[p]);
+        snew(corr->auto_corr[p], corr->nt);
+        gc_calc_ac(corr->unit_vecs[p], corr->nframes, corr->nt, corr->auto_corr[p]);
     }
 
     // DEBUG
     // for(int p = 0; p < npairs_tot; ++p) {
-    // 	printf("Pair %d:\n", p);
-    // 	for(int t = 0; t < corr->nt; ++t) {
-    // 		printf("%f\t%f\n", corr->dt * (t+1), corr->auto_corr[p][t]);
-    // 	}
+    //  printf("Pair %d:\n", p);
+    //  for(int t = 0; t < corr->nt; ++t) {
+    //      printf("%f\t%f\n", corr->dt * (t+1), corr->auto_corr[p][t]);
+    //  }
     // }
 
     // calculate s2 for each trajectory of unit vectors
     snew(corr->s2, npairs_tot);
     for(int p = 0; p < npairs_tot; ++p) {
-    	corr->s2[p] = gc_calc_s2(corr->unit_vecs[p], corr->nframes);
+        corr->s2[p] = gc_calc_s2(corr->unit_vecs[p], corr->nframes);
     }
 }
 
 
 void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, t_atoms *atoms) {
-	if(corr_fname) {
-		FILE *f;
-		char fname[256];
-		int p = 0;
+    if(corr_fname) {
+        FILE *f;
+        char fname[256];
+        int p = 0;
 
-		for(int np = 0; np < corr->nnamepairs; ++np) {
-			sprintf(fname, "%s-%s_%s", 
-				corr->atomnames[2*np], corr->atomnames[2*np+1], corr_fname);
+        for(int np = 0; np < corr->nnamepairs; ++np) {
+            sprintf(fname, "%s-%s_%s", 
+                corr->atomnames[2*np], corr->atomnames[2*np+1], corr_fname);
 
-			f = fopen(fname, "w");
-			int i;
+            f = fopen(fname, "w");
+            int i;
 
-			for(i = 0; i < corr->natompairs[np]; ++i) {
+            for(i = 0; i < corr->natompairs[np]; ++i) {
                 int atomnum1 = corr->atompairs[2*(p+i)], atomnum2 = corr->atompairs[2*(p+i)+1];
 
                 // Print header for this pair
-				fprintf(f, "# PAIR %d\n", i);
+                fprintf(f, "# PAIR %d\n", i);
                 fprintf(f, "# ATOMS %d and %d\n", atomnum1, atomnum2);
 
                 if(atoms) {
@@ -492,24 +492,24 @@ void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, t_atoms *ato
 
 
                 // Print column labels
-				fprintf(f, "# t\tautocorrelation\n");
-				fprintf(f, "%f\t%f\n", 
-					0.0, 1.0);
+                fprintf(f, "# t\tautocorrelation\n");
+                fprintf(f, "%f\t%f\n", 
+                    0.0, 1.0);
 
                 // Print autocorrelations for this pair
-				for(int t = 1; t <= corr->nt; ++t) {
-					fprintf(f, "%f\t%f\n", 
-						t * corr->dt, corr->auto_corr[p+i][t-1]);
-				}
-			}
+                for(int t = 1; t <= corr->nt; ++t) {
+                    fprintf(f, "%f\t%f\n", 
+                        t * corr->dt, corr->auto_corr[p+i][t-1]);
+                }
+            }
 
-			
-			fclose(f);
-			gk_print_log("Autocorrelation data for %s-%s pairs saved to %s\n", 
-				corr->atomnames[2*np], corr->atomnames[2*np+1], fname);
-			p += i;
-		}
-	}
+            
+            fclose(f);
+            gk_print_log("Autocorrelation data for %s-%s pairs saved to %s\n", 
+                corr->atomnames[2*np], corr->atomnames[2*np+1], fname);
+            p += i;
+        }
+    }
 }
 
 
@@ -538,28 +538,27 @@ void gc_save_s2(struct gcorr_dat_t *corr, const char *s2_fname, t_atoms *atoms) 
 
 
 void gc_free_corr(struct gcorr_dat_t *corr) {
-	int total = 0;
+    int total = 0;
 
-	if((corr->auto_corr || corr->unit_vecs) && corr->natompairs) {
-		for(int i = 0; i < corr->nnamepairs; ++i) {
+    if((corr->auto_corr || corr->unit_vecs) && corr->natompairs) {
+        for(int i = 0; i < corr->nnamepairs; ++i) {
             total += corr->natompairs[i];
         }
-	}
+    }
 
-    if(corr->atompairs)		sfree(corr->atompairs);
-    if(corr->natompairs)	sfree(corr->natompairs);
+    if(corr->atompairs)  sfree(corr->atompairs);
+    if(corr->natompairs) sfree(corr->natompairs);
+    if(corr->s2)         sfree(corr->s2);
 
     if(corr->unit_vecs) {
-	    for(int i = 0; i < total; ++i)
-	        sfree(corr->unit_vecs[i]);
-	    sfree(corr->unit_vecs);
-	}
+        for(int i = 0; i < total; ++i)
+            sfree(corr->unit_vecs[i]);
+        sfree(corr->unit_vecs);
+    }
 
     if(corr->auto_corr) {
         for(int i = 0; i < total; ++i)
             sfree(corr->auto_corr[i]);
         sfree(corr->auto_corr);
     }
-
-    if(corr->s2)            sfree(corr->s2);
 }
