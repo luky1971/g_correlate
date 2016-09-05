@@ -55,6 +55,33 @@ void gc_init_corr_dat(struct gcorr_dat_t *corr) {
 }
 
 
+void gc_free_corr(struct gcorr_dat_t *corr) {
+    int total = 0;
+
+    if((corr->auto_corr || corr->unit_vecs) && corr->natompairs) {
+        for(int i = 0; i < corr->nnamepairs; ++i) {
+            total += corr->natompairs[i];
+        }
+    }
+
+    if(corr->atompairs)  sfree(corr->atompairs);
+    if(corr->natompairs) sfree(corr->natompairs);
+    if(corr->s2)         sfree(corr->s2);
+
+    if(corr->unit_vecs) {
+        for(int i = 0; i < total; ++i)
+            sfree(corr->unit_vecs[i]);
+        sfree(corr->unit_vecs);
+    }
+
+    if(corr->auto_corr) {
+        for(int i = 0; i < total; ++i)
+            sfree(corr->auto_corr[i]);
+        sfree(corr->auto_corr);
+    }
+}
+
+
 void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds,
                   const char **atomnames, int nnamepairs,
                   int natompairs[],
@@ -73,13 +100,12 @@ void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds,
     for(int ai = 0; ai < nnamepairs; ++ai) {
         // Loop through all bond pairs in the system and search for instances of the current atom name pair.
         // This loop is run for each atom name pair to keep the found pairs in the same order as atomnames.
-        // This nested loop isn't as bad as it looks; the number of atom name pairs is usually only 1 or 2.
         for(int bi = 0; bi < bonds->nr; bi+=3) {
             pair_a = -1; // -1 means atom not found
 
             // Check if the current bond pair matches the current name pair in atomnames
-            if(ck_strmatch(atomnames[2*ai], *(atoms->atomname[bonds->iatoms[bi+1]])) == 0 
-                && ck_strmatch(atomnames[2*ai+1], *(atoms->atomname[bonds->iatoms[bi+2]])) == 0) {
+            if(ck_strmatch(atomnames[2*ai], *(atoms->atomname[bonds->iatoms[bi+1]])) == 0 && 
+               ck_strmatch(atomnames[2*ai+1], *(atoms->atomname[bonds->iatoms[bi+2]])) == 0) {
                 // DEBUG
                 // printf("%s matches %s and %s matches %s\n", 
                 //     atomnames[2*ai], *(atoms->atomname[bonds->iatoms[bi+1]]),
@@ -88,8 +114,8 @@ void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds,
                 pair_a = bonds->iatoms[bi+1];
                 pair_b = bonds->iatoms[bi+2];
             }
-            else if(ck_strmatch(atomnames[2*ai+1], *(atoms->atomname[bonds->iatoms[bi+1]])) == 0 
-                && ck_strmatch(atomnames[2*ai], *(atoms->atomname[bonds->iatoms[bi+2]])) == 0) {
+            else if(ck_strmatch(atomnames[2*ai+1], *(atoms->atomname[bonds->iatoms[bi+1]])) == 0 && 
+                    ck_strmatch(atomnames[2*ai], *(atoms->atomname[bonds->iatoms[bi+2]])) == 0) {
                 // DEBUG
                 // printf("%s matches %s and %s matches %s\n", 
                 //     atomnames[2*ai], *(atoms->atomname[bonds->iatoms[bi+2]]),
@@ -183,9 +209,9 @@ int gc_traj2uvecs(const char *traj_fname,
 
             } while(read_next_x(*oenv, status, &t,
 #ifndef GRO_V5 
-                natoms,
+                                natoms,
 #endif
-                x, box));
+                                x, box));
         } // if dt < 0
         else { // if provided dt >= 0
             // Only store the data in the trajectory intervals matching the given dt
@@ -225,9 +251,9 @@ int gc_traj2uvecs(const char *traj_fname,
                 ++trajframe;
             } while(read_next_x(*oenv, status, &t,
 #ifndef GRO_V5 
-                natoms,
+                                natoms,
 #endif
-                x, box));
+                                x, box));
         } // if provided dt >= 0
     } // if natoms > 0
     else {
@@ -383,18 +409,20 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
             corr->nt, corr->nt * corr->dt, fnames[efT_TRAJ]);
     }
 
-    // DEBUG
+
     gk_print_log("dt is %f, nt is %d.\n", corr->dt, corr->nt);
+    
+    // DEBUG
     // print unit vecs
-    FILE *vecf = fopen("vecs_fbyp.txt", "w");
-    for(int fr = 0; fr < corr->nframes; ++fr) {
-        fprintf(vecf, "\nFrame %d:\n", fr);
-        for(int p = 0; p < npairs_tot; ++p) {
-            fprintf(vecf, "Pair %d: %f, %f, %f\n", p, unit_vecs[fr][p][XX], unit_vecs[fr][p][YY], unit_vecs[fr][p][ZZ]);
-        }
-    }
-    fclose(vecf);
-    gk_print_log("Unit vectors saved to vecs_fbyp.txt for debugging.\n");
+    // FILE *vecf = fopen("vecs_fbyp.txt", "w");
+    // for(int fr = 0; fr < corr->nframes; ++fr) {
+    //     fprintf(vecf, "\nFrame %d:\n", fr);
+    //     for(int p = 0; p < npairs_tot; ++p) {
+    //         fprintf(vecf, "Pair %d: %f, %f, %f\n", p, unit_vecs[fr][p][XX], unit_vecs[fr][p][YY], unit_vecs[fr][p][ZZ]);
+    //     }
+    // }
+    // fclose(vecf);
+    // gk_print_log("Unit vectors saved to vecs_fbyp.txt for debugging.\n");
 
 
     // Reformat 2d array unit_vecs from [frame#][vec] to [vec][frame#]
@@ -424,17 +452,17 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
 
     // DEBUG
     // print unit vecs
-    FILE *vecf2 = fopen("vecs_pbyf.txt", "w");
-    for(int p = 0; p < npairs_tot; ++p) {
-        fprintf(vecf2, "\nPair %d, atoms %d and %d:\n", 
-            p, corr->atompairs[2 * p], corr->atompairs[2 * p + 1]);
-        for(int fr = 0; fr < corr->nframes; ++fr) {
-            fprintf(vecf2, "Frame %d: %f, %f, %f\n", 
-                fr, corr->unit_vecs[p][fr][XX], corr->unit_vecs[p][fr][YY], corr->unit_vecs[p][fr][ZZ]);
-        }
-    }
-    fclose(vecf2);
-    gk_print_log("Unit vectors saved to vecs_pbyf.txt for debugging.\n");
+    // FILE *vecf2 = fopen("vecs_pbyf.txt", "w");
+    // for(int p = 0; p < npairs_tot; ++p) {
+    //     fprintf(vecf2, "\nPair %d, atoms %d and %d:\n", 
+    //         p, corr->atompairs[2 * p], corr->atompairs[2 * p + 1]);
+    //     for(int fr = 0; fr < corr->nframes; ++fr) {
+    //         fprintf(vecf2, "Frame %d: %f, %f, %f\n", 
+    //             fr, corr->unit_vecs[p][fr][XX], corr->unit_vecs[p][fr][YY], corr->unit_vecs[p][fr][ZZ]);
+    //     }
+    // }
+    // fclose(vecf2);
+    // gk_print_log("Unit vectors saved to vecs_pbyf.txt for debugging.\n");
 
 
     // calculate autocorrelation function for each trajectory of unit vectors
@@ -533,32 +561,5 @@ void gc_save_s2(struct gcorr_dat_t *corr, const char *s2_fname, t_atoms *atoms) 
 
         fclose(f);
         gk_print_log("S^2 values saved to %s\n", s2_fname);
-    }
-}
-
-
-void gc_free_corr(struct gcorr_dat_t *corr) {
-    int total = 0;
-
-    if((corr->auto_corr || corr->unit_vecs) && corr->natompairs) {
-        for(int i = 0; i < corr->nnamepairs; ++i) {
-            total += corr->natompairs[i];
-        }
-    }
-
-    if(corr->atompairs)  sfree(corr->atompairs);
-    if(corr->natompairs) sfree(corr->natompairs);
-    if(corr->s2)         sfree(corr->s2);
-
-    if(corr->unit_vecs) {
-        for(int i = 0; i < total; ++i)
-            sfree(corr->unit_vecs[i]);
-        sfree(corr->unit_vecs);
-    }
-
-    if(corr->auto_corr) {
-        for(int i = 0; i < total; ++i)
-            sfree(corr->auto_corr[i]);
-        sfree(corr->auto_corr);
     }
 }
