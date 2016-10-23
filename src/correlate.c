@@ -42,6 +42,9 @@
 #define GC_TIME_EQ(X, Y)   GC_FLT_EQ(X, Y, GC_TIME_EPS)
 
 
+void 
+
+
 void gc_init_corr_dat(struct gcorr_dat_t *corr) {
     corr->atomnames = NULL;
     corr->nnamepairs = 0;
@@ -317,6 +320,13 @@ real gc_calc_s2(const rvec unit_vecs[], int nvecs) {
     myz /= nvecs;
 
     return 1.5*(mx2*mx2 + my2*my2 + mz2*mz2 + 2*(mxy*mxy + mxz*mxz + myz*myz)) - 0.5;
+}
+
+
+real gc_calc_s2_fit(const real auto_corr[], real start_t, real dt, int nt, 
+                    real s2_incr, real tau_start, real tau_incr, real tau_end) {
+    // TODO
+    return 0;
 }
 
 
