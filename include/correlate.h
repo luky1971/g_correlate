@@ -82,8 +82,15 @@ struct gcorr_dat_t {
 
 
 void gc_init_corr_dat(struct gcorr_dat_t *corr);
-/* Initializes a gcorr_dat_t struct, such as setting pointers to NULL and setting default parameters.
+/* Initializes a gcorr_dat_t struct, including setting pointers to NULL and setting default parameters.
  */
+
+void gc_free_corr(struct gcorr_dat_t *corr);
+/* Frees the dynamic memory in a gcorr_dat_t struct.
+ * WARNING: this does not free any memory allocated for corr->atomnames.
+ * Whoever allocated that memory is responsible for it! 
+ */
+
 
 void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *corr, unsigned long flags);
 /* Calculates the autocorrelation functions for the trajectory in fnames[efT_TRAJ] using the topology in fnames[efT_TOP].
@@ -151,12 +158,6 @@ void gc_save_s2(struct gcorr_dat_t *corr, const char *s2_fname, t_atoms *atoms);
 /* Outputs the given S2 data to a file.
  * If a t_atoms struct is given, atom pair names and residues will also be printed.
  * Otherwise, set atoms to NULL.
- */
-
-void gc_free_corr(struct gcorr_dat_t *corr);
-/* Frees the dynamic memory in a gcorr_dat_t struct.
- * WARNING: this does not free any memory allocated for corr->atomnames.
- * Whoever allocated that memory is responsible for it! 
  */
 
 

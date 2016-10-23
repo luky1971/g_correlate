@@ -520,12 +520,6 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     //      printf("%f\t%f\n", corr->dt * (t+1), corr->auto_corr[p][t]);
     //  }
     // }
-
-    // calculate s2 for each trajectory of unit vectors
-    snew(corr->s2, npairs_tot);
-    for(int p = 0; p < npairs_tot; ++p) {
-        corr->s2[p] = gc_calc_s2(corr->unit_vecs[p], corr->nframes);
-    }
 }
 
 

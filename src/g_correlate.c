@@ -121,9 +121,34 @@ int main(int argc, char *argv[]) {
     // }
 
 
-    // Run autocorrelation and S2 calculation
+    // Run autocorrelation
     gc_correlate(fnames, &oenv, &corr, flags);
 
+    // Calculate S2 for each atom pair
+    int npairs_tot = 0;
+    for (int i = 0; i < corr.nnamepairs; ++i) {
+        npairs_tot += corr.natompairs[i];
+    }
+    snew(corr.s2, npairs_tot);
+    for (int p = 0; p < npairs_tot; ++p) {
+        // corr.s2[p] = gc_calc_s2(corr.unit_vecs[p], corr.nframes);
+        real s2 = 0;
+        real tau = 0;
+
+        // TODO: let user provide parameters!
+        gc_calc_s2_fit(corr.auto_corr[p], // autocorrelation function
+                       corr.dt, // tdelay start
+                       corr.dt, // tdelay dt
+                       corr.nt / 5, // tdelay nt
+                       0.1, // s2 increment for regression search
+                       corr.dt, // tau start
+                       corr.dt, // tau increment
+                       corr.nframes / 5, // number of taus for regression search
+                       &s2, // optimized s2
+                       &tau); // optimized tau
+
+        corr.s2[p] = s2;
+    }
 
     // Print results
     t_topology top;
