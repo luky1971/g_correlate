@@ -25,6 +25,8 @@
 
 #include "correlate.h"
 
+#include <float.h>
+#include <math.h>
 #include <stdio.h>
 #include "gkut_io.h"
 #include "gkut_log.h"
@@ -36,13 +38,11 @@
 #define GC_PAIR_ALLOC 10 // Initial amount by which to dynamically allocate array memory for atom pairs.
 #define GC_FRAME_ALLOC 500 // Initial amount by which to dynamically allocate array memory of size # trajectory frames. 
 #define GC_TIME_EPS 0.000001 // Epsilon for comparing floating point time values
+#define GC_S2_EPS 0.000001 // Epsilon for comparing floating point s2 values
 
 // Test if two floating point values are nearly equivalent
 #define GC_FLT_EQ(X, Y, EPS)    (((X) > ((Y) - EPS)) && ((X) < ((Y) + EPS)))
 #define GC_TIME_EQ(X, Y)   GC_FLT_EQ(X, Y, GC_TIME_EPS)
-
-
-void 
 
 
 void gc_init_corr_dat(struct gcorr_dat_t *corr) {
@@ -323,10 +323,41 @@ real gc_calc_s2(const rvec unit_vecs[], int nvecs) {
 }
 
 
-real gc_calc_s2_fit(const real auto_corr[], real start_t, real dt, int nt, 
-                    real s2_incr, real tau_start, real tau_incr, real tau_end) {
-    // TODO
-    return 0;
+// uses single exponential least squares fitting of autocorrelation function to calculate s2
+void gc_calc_s2_fit(const real auto_corr[], real start_t, real dt, int nt, 
+                    real s2_incr, real tau_start, real tau_incr, int ntau, 
+                    real *s2, real *tau) {
+    real min_cost = FLT_MAX;
+    real best_s2 = 0.0;
+    real best_tau = tau_start;
+
+    // calculate cost for all pairs of s2 and tau in given ranges 
+    for (real s2i = 0; s2i < 1.0 + GC_S2_EPS; s2i += s2_incr) {
+        for (int taucount = 0; taucount < ntau; ++taucount) {
+            real cost = 0.0;
+            real taui = tau_start + taucount * tau_incr;
+
+            // calculate cost for this pair of s2 and tau
+            // as sum of squared residuals over range of tdelays
+            for (int ti = 0; ti < nt; ++ti) {
+                real tdelay = start_t + ti * dt;
+                real pred = (1 - s2i) * exp(-tdelay/taui) + s2i;
+                real residual = pred - auto_corr[ti];
+
+                cost += residual * residual;
+            }
+
+            // check if this is the lowest-cost pair of s2 and tau so far
+            if (cost < min_cost) {
+                min_cost = cost;
+                best_s2 = s2i;
+                best_tau = taui;
+            }
+        }
+    }
+
+    *s2 = best_s2;
+    *tau = best_tau;
 }
 
 
