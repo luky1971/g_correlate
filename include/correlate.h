@@ -132,21 +132,6 @@ real gc_calc_s2(const rvec unit_vecs[], int nvecs);
  * Returns S2.
  */
 
-void gc_calc_s2_fit(const real auto_corr[], real start_t, real dt, int nt, 
-                    real s2_incr, real tau_start, real tau_incr, int ntau, 
-                    real *s2, real *tau);
-/* Calculates the generalized Lipari-Szabo order parameter S^2
- * by performing a single exponential fit of the given autocorrelation function
- * from tdelay = start_t to tdelay = start_t + dt * (nt - 1).
- * The given array of autocorrelation values should be size nt, 
- * where auto_corr[0] is the autocorrelation value at tdelay = start_t, 
- * and subsequent values are at the previous tdelay plus dt.
- * This autocorrelation function is fit to (1-S2)*exp(-tdelay/tau) + s2
- * by optimizing S2 and tau to minimize the cost function of regression.
- * The optimization is performed by a global search from S2 = 0 to S2 = 1 using increments of s2_incr,
- * and from tau = tau_start to tau = tau_start + (ntau - 1) * tau_incr using increments of tau_incr.
- * Stores the optimized S2 in *s2 and the optimized tau in *tau.
- */
 
 void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, t_atoms *atoms);
 /* Outputs the given autocorrelation data to a file.
