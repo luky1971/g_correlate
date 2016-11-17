@@ -4,8 +4,8 @@
 set -e
 
 # Check arguments
-if [ "$#" -lt 2 ]; then
-    echo "ERROR: Need at least 2 arguments: filename, first pair, [last pair]"
+if [ "$#" -lt 1 ]; then
+    echo "Usage: gc_getpair filename [firstpair] [last pair]"
     exit 1
 fi
 
@@ -13,14 +13,19 @@ FILE="$1"
 FIRST="$2"
 LAST="$3"
 
-if [ "$#" -lt 3 ]; then
+if [ "$#" -eq 2 ]; then
     LAST="$FIRST"
+fi
+
+if [ "$#" -eq 1 ]; then
+    FIRST=0
+    LAST=-1
 fi
 
 # Get filename without extra fluff
 FNAME=$(echo "$FILE" | rev | cut -d'/' -f 1 | cut -d'.' -f 2 | rev)
 EXT=$(echo "$FILE" | rev | cut -d'.' -f 1 | rev)
 
-awk -F '[, ]' -v file="$FNAME" -v ext="$EXT" -v first="$FIRST" -v last="$LAST" '/PAIR/{pair=$3}{if (pair >= first && pair <= last) print > (file "_p" pair "." ext)}' "$FILE"
+awk -F '[, ]' -v file="$FNAME" -v ext="$EXT" -v first="$FIRST" -v last="$LAST" '/PAIR/{pair=$3}{if (pair >= first && (pair <= last || last < 0)) print >> (file "_p" pair "." ext); close(file "_p" pair "." ext)}' "$FILE"
 
 echo "Separated files saved as "$FNAME"_p#.dat"
