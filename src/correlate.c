@@ -1,20 +1,20 @@
 /*
  * Copyright 2016 Ahnaf Siddiqui and Sameer Varma
  *
- * 
+ *
  * Autocorrelation and S2 order parameter formulas are borrowed from
  *
- * Chatfield, D. C.; Szabo, A.; Brooks, B. R., 
- * Molecular Dynamics of Staphylococcal Nuclease:  Comparison of Simulation with 15N and 13C NMR Relaxation Data. 
+ * Chatfield, D. C.; Szabo, A.; Brooks, B. R.,
+ * Molecular Dynamics of Staphylococcal Nuclease:  Comparison of Simulation with 15N and 13C NMR Relaxation Data.
  * Journal of the American Chemical Society 1998, 120 (21), 5301-5311.
  *
  * and
  *
- * Gu, Y.; Li, D.-W.; Brüschweiler, R., 
- * NMR Order Parameter Determination from Long Molecular Dynamics Trajectories for Objective Comparison with Experiment. 
+ * Gu, Y.; Li, D.-W.; Brüschweiler, R.,
+ * NMR Order Parameter Determination from Long Molecular Dynamics Trajectories for Objective Comparison with Experiment.
  * Journal of Chemical Theory and Computation 2014, 10 (6), 2599-2607.
  *
- * 
+ *
  * This program uses the GROMACS molecular simulation package API.
  * Copyright (c) 1991-2000, University of Groningen, The Netherlands.
  * Copyright (c) 2001-2004, The GROMACS development team.
@@ -34,7 +34,7 @@
 
 
 #define GC_PAIR_ALLOC 10 // Initial amount by which to dynamically allocate array memory for atom pairs.
-#define GC_FRAME_ALLOC 500 // Initial amount by which to dynamically allocate array memory of size # trajectory frames. 
+#define GC_FRAME_ALLOC 500 // Initial amount by which to dynamically allocate array memory of size # trajectory frames.
 #define GC_TIME_EPS 0.000001 // Epsilon for comparing floating point time values
 
 // Test if two floating point values are nearly equivalent
@@ -104,20 +104,20 @@ void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds,
             pair_a = -1; // -1 means atom not found
 
             // Check if the current bond pair matches the current name pair in atomnames
-            if(ck_strmatch(atomnames[2*ai], *(atoms->atomname[bonds->iatoms[bi+1]])) == 0 && 
+            if(ck_strmatch(atomnames[2*ai], *(atoms->atomname[bonds->iatoms[bi+1]])) == 0 &&
                ck_strmatch(atomnames[2*ai+1], *(atoms->atomname[bonds->iatoms[bi+2]])) == 0) {
                 // DEBUG
-                // printf("%s matches %s and %s matches %s\n", 
+                // printf("%s matches %s and %s matches %s\n",
                 //     atomnames[2*ai], *(atoms->atomname[bonds->iatoms[bi+1]]),
                 //     atomnames[2*ai+1], *(atoms->atomname[bonds->iatoms[bi+2]]));
 
                 pair_a = bonds->iatoms[bi+1];
                 pair_b = bonds->iatoms[bi+2];
             }
-            else if(ck_strmatch(atomnames[2*ai+1], *(atoms->atomname[bonds->iatoms[bi+1]])) == 0 && 
+            else if(ck_strmatch(atomnames[2*ai+1], *(atoms->atomname[bonds->iatoms[bi+1]])) == 0 &&
                     ck_strmatch(atomnames[2*ai], *(atoms->atomname[bonds->iatoms[bi+2]])) == 0) {
                 // DEBUG
-                // printf("%s matches %s and %s matches %s\n", 
+                // printf("%s matches %s and %s matches %s\n",
                 //     atomnames[2*ai], *(atoms->atomname[bonds->iatoms[bi+2]]),
                 //     atomnames[2*ai+1], *(atoms->atomname[bonds->iatoms[bi+1]]));
 
@@ -141,15 +141,15 @@ void gc_get_pairs(const t_atoms *atoms, const t_ilist *bonds,
             }
         }
     }
-    
+
     srenew(*pairs, pair_ind * 2); // Free any excess memory in pairs.
 }
 
 
-int gc_traj2uvecs(const char *traj_fname, 
-                  output_env_t *oenv, 
-                  real *dt, 
-                  int atompairs[], int npairs, 
+int gc_traj2uvecs(const char *traj_fname,
+                  output_env_t *oenv,
+                  real *dt,
+                  int atompairs[], int npairs,
                   rvec ***unit_vecs) {
     rvec *x;
     t_trxstatus *status = NULL;
@@ -180,12 +180,12 @@ int gc_traj2uvecs(const char *traj_fname,
                 cur_dt = t - last_t;
                 last_t = t;
 
-                // Check for consistency of trajectory timestep 
-                // (this is necessary for proper autocorrelation with default trajectory timestep, 
+                // Check for consistency of trajectory timestep
+                // (this is necessary for proper autocorrelation with default trajectory timestep,
                 // otherwise specify a timestep in dt that is at least as large as the largest timestep
                 // in the trajectory and is a multiple of all other timesteps in the trajectory)
                 if(!GC_TIME_EQ(cur_dt, *dt) && nframes > 1) {
-                    gk_log_fatal(FARGS, "Inconsistent time step in frame %d of %s: dt is %f vs. previous dt of %f.\n", 
+                    gk_log_fatal(FARGS, "Inconsistent time step in frame %d of %s: dt is %f vs. previous dt of %f.\n",
                         nframes, traj_fname, cur_dt, *dt);
                 }
                 else if(nframes == 1) {
@@ -208,7 +208,7 @@ int gc_traj2uvecs(const char *traj_fname,
                 ++nframes;
 
             } while(read_next_x(*oenv, status, &t,
-#ifndef GRO_V5 
+#ifndef GRO_V5
                                 natoms,
 #endif
                                 x, box));
@@ -244,13 +244,13 @@ int gc_traj2uvecs(const char *traj_fname,
                 else if(cur_dt > *dt) {
                     gk_log_fatal(FARGS, "Error at frame %d of %s: "
                         "given dt = %f is not a multiple of the trajectory timestep, "
-                        "or the trajectory has inconsistent timesteps.\n", 
+                        "or the trajectory has inconsistent timesteps.\n",
                         trajframe, traj_fname, *dt);
                 }
 
                 ++trajframe;
             } while(read_next_x(*oenv, status, &t,
-#ifndef GRO_V5 
+#ifndef GRO_V5
                                 natoms,
 #endif
                                 x, box));
@@ -272,12 +272,12 @@ int gc_traj2uvecs(const char *traj_fname,
 
 // C(t) = (1/2)⟨3[e(τ)e(τ + t)]^2 − 1⟩
 // from
-// Chatfield, D. C.; Szabo, A.; Brooks, B. R., 
-// Molecular Dynamics of Staphylococcal Nuclease:  Comparison of Simulation with 15N and 13C NMR Relaxation Data. 
+// Chatfield, D. C.; Szabo, A.; Brooks, B. R.,
+// Molecular Dynamics of Staphylococcal Nuclease:  Comparison of Simulation with 15N and 13C NMR Relaxation Data.
 // Journal of the American Chemical Society 1998, 120 (21), 5301-5311.
 // and
-// Gu, Y.; Li, D.-W.; Brüschweiler, R., 
-// NMR Order Parameter Determination from Long Molecular Dynamics Trajectories for Objective Comparison with Experiment. 
+// Gu, Y.; Li, D.-W.; Brüschweiler, R.,
+// NMR Order Parameter Determination from Long Molecular Dynamics Trajectories for Objective Comparison with Experiment.
 // Journal of Chemical Theory and Computation 2014, 10 (6), 2599-2607.
 void gc_calc_ac(const rvec vecs[], int nvecs, int nt, real auto_corr[]) {
     // tdelay is the number of indexes of separation between consecutive vectors in the current time delay
@@ -294,8 +294,8 @@ void gc_calc_ac(const rvec vecs[], int nvecs, int nt, real auto_corr[]) {
 
 // S^2 = 3/2[⟨x^2⟩^2 + ⟨y^2⟩^2 + ⟨z^2⟩^2 + 2⟨xy⟩^2 + 2⟨xz⟩^2 + 2⟨yz⟩^2] - 1/2
 // from
-// Chatfield, D. C.; Szabo, A.; Brooks, B. R., 
-// Molecular Dynamics of Staphylococcal Nuclease:  Comparison of Simulation with 15N and 13C NMR Relaxation Data. 
+// Chatfield, D. C.; Szabo, A.; Brooks, B. R.,
+// Molecular Dynamics of Staphylococcal Nuclease:  Comparison of Simulation with 15N and 13C NMR Relaxation Data.
 // Journal of the American Chemical Society 1998, 120 (21), 5301-5311.
 real gc_calc_s2(const rvec unit_vecs[], int nvecs) {
     real mx2 = 0, my2 = 0, mz2 = 0, mxy = 0, mxz = 0, myz = 0;
@@ -332,8 +332,8 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     // Print atom names and atom numbers
     /*
     for(int i = 0; i < top.atoms.nr; ++i) {
-        printf("%d: %s: %d\n", i, 
-            *(top.atoms.atomname[i]), 
+        printf("%d: %s: %d\n", i,
+            *(top.atoms.atomname[i]),
             top.atoms.atom[i].atomnumber);
     }
     */
@@ -344,7 +344,7 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     for(int f = 0; f < F_NRE; ++f) {
         printf("Interactions array for interaction type %d has %d elements.\n", f, top.idef.il[f].nr);
     }*/
-    
+
     // DEBUG
     // Print interactions
     /*
@@ -382,8 +382,8 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     // Print found atom-atom pairs.
     for(int i = 0; i < npairs_tot * 2; i+=2) {
         printf("Pair %d: %d and %d, %s and %s, atomic #s %d and %d\n",
-            i/2, corr->atompairs[i], corr->atompairs[i+1], 
-            *(top.atoms.atomname[corr->atompairs[i]]), *(top.atoms.atomname[corr->atompairs[i+1]]), 
+            i/2, corr->atompairs[i], corr->atompairs[i+1],
+            *(top.atoms.atomname[corr->atompairs[i]]), *(top.atoms.atomname[corr->atompairs[i+1]]),
             top.atoms.atom[corr->atompairs[i]].atomnumber, top.atoms.atom[corr->atompairs[i+1]].atomnumber);
     }
 
@@ -395,7 +395,7 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     // Read trajectory and get unit vectors for atom pairs
     rvec **unit_vecs;
     corr->nframes = gc_traj2uvecs(fnames[efT_TRAJ], oenv, &(corr->dt), corr->atompairs, npairs_tot, &unit_vecs);
-    
+
     // Set default nt if needed
     if(corr->nt < 0) {
         // User didn't provide nt, so use default which is
@@ -404,29 +404,31 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     }
 
     if(corr->nt >= corr->nframes) {
-        gk_log_fatal(FARGS, 
-            "Given nt, %d, will cause largest time delay nt * dt = %f, to be longer than trajectory %s!\n", 
+        gk_log_fatal(FARGS,
+            "Given nt, %d, will cause largest time delay nt * dt = %f, to be longer than trajectory %s!\n",
             corr->nt, corr->nt * corr->dt, fnames[efT_TRAJ]);
     }
 
 
     gk_print_log("dt is %f, nt is %d.\n", corr->dt, corr->nt);
-    
+
     // DEBUG
     // print unit vecs
-    // FILE *vecf = fopen("vecs_fbyp.txt", "w");
-    // for(int fr = 0; fr < corr->nframes; ++fr) {
-    //     fprintf(vecf, "\nFrame %d:\n", fr);
-    //     for(int p = 0; p < npairs_tot; ++p) {
-    //         fprintf(vecf, "Pair %d: %f, %f, %f\n", p, unit_vecs[fr][p][XX], unit_vecs[fr][p][YY], unit_vecs[fr][p][ZZ]);
-    //     }
-    // }
-    // fclose(vecf);
-    // gk_print_log("Unit vectors saved to vecs_fbyp.txt for debugging.\n");
+#ifdef GTA_DEBUG
+    FILE *vecf = fopen("vecs_fbyp.txt", "w");
+    for(int fr = 0; fr < corr->nframes; ++fr) {
+        fprintf(vecf, "\nFrame %d:\n", fr);
+        for(int p = 0; p < npairs_tot; ++p) {
+            fprintf(vecf, "Pair %d: %f, %f, %f\n", p, unit_vecs[fr][p][XX], unit_vecs[fr][p][YY], unit_vecs[fr][p][ZZ]);
+        }
+    }
+    fclose(vecf);
+    gk_print_log("Unit vectors saved to vecs_fbyp.txt for debugging.\n");
+#endif
 
 
     // Reformat 2d array unit_vecs from [frame#][vec] to [vec][frame#]
-    // for better cache locality during autocorrelation calculations, 
+    // for better cache locality during autocorrelation calculations,
     // since autocorrelation is calculated vector by vector.
     // Why wasn't unit_vecs formatted this way in the first place?
     // Because the reallocation pattern needed for growing the number of frames
@@ -454,10 +456,10 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     // print unit vecs
     // FILE *vecf2 = fopen("vecs_pbyf.txt", "w");
     // for(int p = 0; p < npairs_tot; ++p) {
-    //     fprintf(vecf2, "\nPair %d, atoms %d and %d:\n", 
+    //     fprintf(vecf2, "\nPair %d, atoms %d and %d:\n",
     //         p, corr->atompairs[2 * p], corr->atompairs[2 * p + 1]);
     //     for(int fr = 0; fr < corr->nframes; ++fr) {
-    //         fprintf(vecf2, "Frame %d: %f, %f, %f\n", 
+    //         fprintf(vecf2, "Frame %d: %f, %f, %f\n",
     //             fr, corr->unit_vecs[p][fr][XX], corr->unit_vecs[p][fr][YY], corr->unit_vecs[p][fr][ZZ]);
     //     }
     // }
@@ -495,7 +497,7 @@ void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, t_atoms *ato
         int p = 0;
 
         for(int np = 0; np < corr->nnamepairs; ++np) {
-            sprintf(fname, "%s-%s_%s", 
+            sprintf(fname, "%s-%s_%s",
                 corr->atomnames[2*np], corr->atomnames[2*np+1], corr_fname);
 
             f = fopen(fname, "w");
@@ -509,31 +511,31 @@ void gc_save_corr(struct gcorr_dat_t *corr, const char *corr_fname, t_atoms *ato
                 fprintf(f, "# ATOMS %d and %d\n", atomnum1, atomnum2);
 
                 if(atoms) {
-                    fprintf(f, "# ATOM NAMES %s and %s\n", 
-                        *(atoms->atomname[atomnum1]), 
+                    fprintf(f, "# ATOM NAMES %s and %s\n",
+                        *(atoms->atomname[atomnum1]),
                         *(atoms->atomname[atomnum2]));
 
                     fprintf(f, "# RESIDUES %d%s and %d%s\n",
-                        atoms->resinfo[atoms->atom[atomnum1].resind].nr, *(atoms->resinfo[atoms->atom[atomnum1].resind].name), 
+                        atoms->resinfo[atoms->atom[atomnum1].resind].nr, *(atoms->resinfo[atoms->atom[atomnum1].resind].name),
                         atoms->resinfo[atoms->atom[atomnum2].resind].nr, *(atoms->resinfo[atoms->atom[atomnum2].resind].name));
                 }
 
 
                 // Print column labels
                 fprintf(f, "# t\tautocorrelation\n");
-                fprintf(f, "%f\t%f\n", 
+                fprintf(f, "%f\t%f\n",
                     0.0, 1.0);
 
                 // Print autocorrelations for this pair
                 for(int t = 1; t <= corr->nt; ++t) {
-                    fprintf(f, "%f\t%f\n", 
+                    fprintf(f, "%f\t%f\n",
                         t * corr->dt, corr->auto_corr[p+i][t-1]);
                 }
             }
 
-            
+
             fclose(f);
-            gk_print_log("Autocorrelation data for %s-%s pairs saved to %s\n", 
+            gk_print_log("Autocorrelation data for %s-%s pairs saved to %s\n",
                 corr->atomnames[2*np], corr->atomnames[2*np+1], fname);
             p += i;
         }
@@ -552,7 +554,7 @@ void gc_save_s2(struct gcorr_dat_t *corr, const char *s2_fname, t_atoms *atoms) 
             int i;
 
             for(i = 0; i < corr->natompairs[np]; ++i) {
-                fprintf(f, "%d\t%d\t%f\n", 
+                fprintf(f, "%d\t%d\t%f\n",
                     corr->atompairs[2*(p+i)], corr->atompairs[2*(p+i)+1], corr->s2[p+i]);
             }
 

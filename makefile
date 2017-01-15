@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS += -std=c99 -O3
+CFLAGS += -std=c99 -O3 -DGTA_DEBUG
 # CFLAGS += -std=c99 -O3 -DGTA_BENCH
 # CFLAGS += -std=c99 -g -DGTA_DEBUG
 # CFLAGS += -std=c99 -g

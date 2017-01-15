@@ -29,8 +29,8 @@ void gk_init_log(const char *logfile, int argc, char *argv[]) {
 	for(int i = 0; i < argc; ++i) {
 		fprintf(out_log, "%s ", argv[i]);
 	}
-	fprintf(out_log, "\nRun: %d-%d-%d %d:%d:%d\n", 
-		ltime->tm_mon + 1, ltime->tm_mday, ltime->tm_year + 1900, 
+	fprintf(out_log, "\nRun: %d-%d-%d %d:%d:%d\n",
+		ltime->tm_mon + 1, ltime->tm_mday, ltime->tm_year + 1900,
 		ltime->tm_hour, ltime->tm_min, ltime->tm_sec);
 }
 
