@@ -283,11 +283,11 @@ void gc_calc_ac(const rvec vecs[], int nvecs, int nt, real auto_corr[]) {
     // tdelay is the number of indexes of separation between consecutive vectors in the current time delay
     for(int tdelay = 1; tdelay <= nt; ++tdelay) { // iterate through time delays of autocorrelation domain
         real sum = 0, dot;
-        for(int i = 0; i < nvecs - tdelay; i += tdelay) { // iterate through the vectors for each time delay
+        for(int i = 0; i < nvecs - tdelay; ++i) { // iterate through the vectors for each time delay
             dot = iprod(vecs[i], vecs[i + tdelay]);
             sum += 3.0 * dot * dot - 1.0;
         }
-        auto_corr[tdelay - 1] = 0.5 * (sum / ((nvecs - 1) / tdelay));
+        auto_corr[tdelay - 1] = 0.5 * (sum / (nvecs - tdelay));
     }
 }
 
