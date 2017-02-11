@@ -381,7 +381,7 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     // DEBUG
     // Print found atom-atom pairs.
     for(int i = 0; i < npairs_tot * 2; i+=2) {
-        printf("Pair %d: %d and %d, %s and %s, atomic #s %d and %d\n",
+        gk_print_log("Pair %d: %d and %d, %s and %s, atomic #s %d and %d\n",
             i/2, corr->atompairs[i], corr->atompairs[i+1],
             *(top.atoms.atomname[corr->atompairs[i]]), *(top.atoms.atomname[corr->atompairs[i+1]]),
             top.atoms.atom[corr->atompairs[i]].atomnumber, top.atoms.atom[corr->atompairs[i+1]].atomnumber);
@@ -439,6 +439,7 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     snew(corr->unit_vecs, npairs_tot);
 
     // Transpose unit_vecs matrix so that new[pair][frame] = old[frame][pair]
+    gk_print_log("Transposing unit vectors...\n");
     for(int p = 0; p < npairs_tot; ++p) {
         snew(corr->unit_vecs[p], corr->nframes);
 
@@ -470,6 +471,7 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     // calculate autocorrelation function for each trajectory of unit vectors
     snew(corr->auto_corr, npairs_tot);
     for(int p = 0; p < npairs_tot; ++p) {
+        gk_print_log("Autocorrelating pair %d...\n", p);
         snew(corr->auto_corr[p], corr->nt);
         gc_calc_ac(corr->unit_vecs[p], corr->nframes, corr->nt, corr->auto_corr[p]);
     }
@@ -483,6 +485,7 @@ void gc_correlate(const char *fnames[], output_env_t *oenv, struct gcorr_dat_t *
     // }
 
     // calculate s2 for each trajectory of unit vectors
+    gk_print_log("Calculating s2...\n");
     snew(corr->s2, npairs_tot);
     for(int p = 0; p < npairs_tot; ++p) {
         corr->s2[p] = gc_calc_s2(corr->unit_vecs[p], corr->nframes);
